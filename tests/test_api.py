@@ -63,3 +63,16 @@ def test_api_prediction_response_schema(monkeypatch):
     assert res["interval"]["coverage"] == 0.9
     assert res["interval"]["method"] == "split_conformal"
 
+
+def test_predict_returns_503_when_file_not_found(monkeypatch):
+    def fake_get_predictor():
+        raise FileNotFoundError("Model not found")
+
+    monkeypatch.setattr(api, "get_predictor", fake_get_predictor)
+    client = TestClient(api.app)
+    dates = pd.date_range("2024-01-01", periods=25, freq="h").astype(str)
+    payload = [{"timestamp": dates[i], "station": "Trạm A", "PM2.5": 30.0} for i in range(25)]
+    response = client.post("/predict", json={"observations": payload})
+    assert response.status_code == 503
+    assert response.json()["code"] == "MODEL_UNAVAILABLE"
+

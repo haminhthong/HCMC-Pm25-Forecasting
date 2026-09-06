@@ -9,6 +9,8 @@ services:
     build: .
     ports:
       - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
     depends_on:
       train:
         condition: service_completed_successfully

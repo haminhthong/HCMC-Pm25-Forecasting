@@ -1,13 +1,26 @@
+"""FastAPI serving layer for the PM2.5 forecast service.
+
+P0 changes (2026-09-06):
+* P0.4 — the predictor is built via ``Predictor.from_artifact`` which reads
+  the model bundle from a versioned directory (default ``artifacts/``). The
+  active version is resolved through ``production.json`` (or
+  ``PM25_ARTIFACT_DIR`` env var). The legacy direct-load path is preserved
+  via ``Predictor(load_config(...))`` for local development only.
+* P0.6 — readiness fields are surfaced through ``/health`` and ``/predict``.
+"""
+
 from datetime import datetime
 from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.data import load_config
 from src.predict import Predictor
+
+DEFAULT_ARTIFACT_ROOT = Path("artifacts")
 
 
 class Observation(BaseModel):
@@ -55,10 +68,12 @@ class PredictionResponse(BaseModel):
     level: str
     forecast_strategy: str = "ml_model"
     serving_champion: str | None = None
+    is_out_of_distribution: bool = False
     interval: Interval
     model_version: str
     updated_at: str
-
+    production_readiness: str = "unknown"
+    calibration_gate: str = "unknown"
 
 
 class ErrorResponse(BaseModel):
@@ -68,15 +83,39 @@ class ErrorResponse(BaseModel):
     message: str
 
 
+def _resolve_artifact_root() -> Path:
+    """Return the directory that holds the versioned artifact bundle.
+
+    Resolution order:
+    1. ``PM25_ARTIFACT_DIR`` environment variable;
+    2. ``./artifacts`` (default working-tree location).
+
+    The active version inside that directory is selected by
+    ``Predictor.from_artifact`` via ``production.json``.
+    """
+    env_value = __import__("os").environ.get("PM25_ARTIFACT_DIR")
+    if env_value:
+        return Path(env_value)
+    return DEFAULT_ARTIFACT_ROOT
+
+
 @lru_cache
 def get_predictor() -> Predictor:
-    """Nạp predictor một lần và tái sử dụng giữa các request."""
-    return Predictor(load_config("configs/config.yaml"))
+    """Nạp predictor một lần và tái sử dụng giữa các request (P0.4).
+
+    The predictor is built from a self-contained artifact bundle. The
+    legacy ``Predictor(load_config(...))`` path is intentionally NOT used
+    here because it would couple the API to the working tree's
+    ``configs/config.yaml`` and reintroduce the training-serving skew that
+    P0.4 is meant to eliminate.
+    """
+    artifact_root = _resolve_artifact_root()
+    return Predictor.from_artifact(artifact_root)
 
 
 app = FastAPI(
     title="API dự báo PM2.5 TP.HCM",
-    version="1.0.0",
+    version="1.1.0",
     description="Hệ thống dự báo nồng độ PM2.5 giờ tiếp theo không rò rỉ dữ liệu.",
 )
 
@@ -88,9 +127,13 @@ def health():
         predictor = get_predictor()
         if predictor.model is None:
             raise ValueError("Model is None")
+        metadata = predictor.metadata or {}
         return {
             "status": "ready",
             "model_loaded": True,
+            "model_version": metadata.get("model_version"),
+            "production_readiness": metadata.get("production_readiness", "unknown"),
+            "calibration_gate": metadata.get("calibration_gate", "unknown"),
         }
     except Exception as err:
         raise HTTPException(
@@ -117,7 +160,7 @@ def predict(request: PredictionRequest):
     except FileNotFoundError:
         return JSONResponse(
             status_code=503,
-            detail="Mô hình hoặc artifact chưa sẵn sàng.",
+            content={"code": "MODEL_UNAVAILABLE", "message": "Mô hình hoặc artifact chưa sẵn sàng."},
         )
     except Exception:
         return JSONResponse(

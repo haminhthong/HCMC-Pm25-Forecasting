@@ -1,9 +1,4 @@
-"""Backward-compatible facade for evaluation metrics and baselines.
-
-Re-exports from ``src.evaluation`` and ``src.forecasting.baselines``.
-"""
-
-from __future__ import annotations
+"""Evaluation package for regression, classification, slices, and intervals."""
 
 from src.evaluation.evaluator import evaluate_baselines
 from src.evaluation.metrics import (
@@ -17,10 +12,6 @@ from src.evaluation.metrics import (
 )
 from src.evaluation.slices import sliced_error_analysis
 from src.evaluation.station_metrics import metrics_by_station
-from src.forecasting.baselines import (
-    persistence_predictions,
-    seasonal_naive_predictions,
-)
 
 __all__ = [
     "VALID_LABELS",
@@ -31,8 +22,6 @@ __all__ = [
     "evaluate_baselines",
     "get_threshold_params",
     "metrics_by_station",
-    "persistence_predictions",
     "regression_and_classification_metrics",
-    "seasonal_naive_predictions",
     "sliced_error_analysis",
 ]

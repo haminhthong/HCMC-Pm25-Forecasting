@@ -1,19 +1,38 @@
-# Data card
+# Data Card: Ho Chi Minh City PM2.5 Observation Dataset
 
-## Dữ liệu dùng trong repository
+## 1. Trạng thái Dữ liệu (Provenance & Readiness)
 
-`sample/air_quality_sample.csv` là dữ liệu tổng hợp phục vụ smoke test, không phải quan trắc thật và không được dùng để tuyên bố chất lượng dự báo.
+> [!WARNING]
+> **SMOKE TEST ONLY — NOT A PRODUCTION BENCHMARK**
+>
+> Tập dữ liệu commit trong repository (`data/sample/air_quality_sample.csv`) chỉ gồm 74 dòng dữ liệu tổng hợp (synthetic sample) với 8 quan sát trong tập test.
+> **Tuyệt đối không sử dụng kết quả đánh giá trên file này để tuyên bố chất lượng dự báo thực tế** (như QWK, Recall, hay MASE). Toàn bộ artifact sinh ra từ tập sample được gắn cờ rõ ràng:
+> `production_readiness: "smoke_test_only"`.
 
-## Data contract
+## 2. Temporal Contract & Chống Data Leakage
 
-- Khóa logic: `(station, timestamp)` phải duy nhất.
-- Tần suất kỳ vọng: một giờ; khoảng trống được báo cáo trong data audit.
-- Cột bắt buộc: `timestamp`, `station`, `PM2.5`.
-- Cột tùy chọn: `TSP`, `NO2`, `SO2`, `CO`, `O3`, `temperature`, `humidity`.
-- `timestamp` phải chuyển được sang datetime; `station` không được thiếu.
-- Giá trị 0 được giữ mặc định. Chỉ bật `zero_as_missing` khi có bằng chứng từ tài liệu nguồn hoặc sensitivity analysis.
+- **Forecast Origin ($t$):** Thời điểm hiện tại tại lúc thực hiện dự báo.
+- **Dự báo mục tiêu ($t+1$):** Nồng độ PM2.5 trung bình tại giờ tiếp theo.
+- **Tính hợp lệ của PM2.5($t$):** Quan sát PM2.5 tại mốc $t$ đã hoàn tất đo đạc tại thời điểm phát lệnh dự báo, do đó là **đặc trưng đầu vào hoàn toàn hợp lệ**, không phải rò rỉ dữ liệu.
+- **Closed='left' Rolling History:** Các đặc trưng rolling (mean, std) chỉ tính trên lịch sử quan trắc nghiêm ngặt TRƯỚC thời điểm $t$.
+- **Exact Clock-Time Lag:** Tra cứu theo mốc thời gian thực (`timestamp - lag`), không dịch chuyển số dòng (row-position shift). Nếu xuất hiện khoảng trống dữ liệu, lag nhận giá trị `NaN`.
 
-## Dữ liệu thật cần bổ sung
+## 3. Canonical Data Contract (`AirQualityDataset`)
 
-Trước khi công bố kết quả, điền đầy đủ nguồn/URL, đơn vị phát hành, giấy phép, phiên bản tải, thời gian bao phủ, số trạm, đơn vị đo, quy ước missing/sentinel và các bước biến đổi. Không commit dữ liệu nếu giấy phép không cho phép phân phối lại.
+Dữ liệu quan trắc từ mọi nguồn (CSV, OpenAQ API, Weather API) đều được chuẩn hóa về schema chung:
 
+| Cột | Ý nghĩa | Miền giá trị vật lý | Bắt buộc |
+|---|---|---|---|
+| `timestamp` | Thời gian quan trắc (ISO-8601 / UTC+7) | Datetime hợp lệ | Có |
+| `station_id` | Định danh trạm quan trắc | String | Có |
+| `PM2.5` | Nồng độ bụi mịn PM2.5 ($\mu g/m^3$) | $0 - 1000$ | Có |
+| `latitude` / `longitude` | Tọa độ địa lý của trạm | $[-90, 90]$ / $[-180, 180]$ | Tùy chọn |
+| `TSP`, `PM10`, `NO2`, `SO2`, `CO`, `O3` | Nồng độ các chất ô nhiễm khác | Miền vật lý tương ứng | Tùy chọn |
+| `temperature`, `humidity` | Nhiệt độ ($^\circ C$), Độ ẩm tương đối (%) | $[-20, 60]$, $[0, 100]$ | Tùy chọn |
+| `wind_speed`, `wind_direction`, `rainfall` | Khí tượng bề mặt | $[0, 100]$, $[0, 360]$, $[0, 500]$ | Tùy chọn |
+
+## 4. Quy ước Missing và Regularization
+
+- **Hourly Regularization:** Chuỗi quan trắc của mỗi trạm được chuẩn hóa về lưới 1 giờ (`freq="h"`). Giờ bị thiếu được chèn dòng `NaN` tường minh.
+- **Imputation:** Sklearn `SimpleImputer` xử lý các giá trị `NaN` đồng nhất giữa quy trình huấn luyện và phục vụ suy luận (`Predictor`).
+- **Data Availability Contract:** Các biến khí tượng/ô nhiễm có độ trễ cập nhật được định nghĩa độ trễ trong cấu hình (`feature_availability`) để mô phỏng chính xác độ trễ thực tế tại origin $t$.

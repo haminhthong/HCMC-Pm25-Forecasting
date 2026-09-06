@@ -340,22 +340,21 @@ Hệ thống tích hợp bộ unit test nghiêm ngặt tại `tests/test_audit_a
 
 | Mức độ | Hạng mục công việc | Trạng thái |
 |:---:|---|:---:|
-| 🔴 **P0** | Sửa báo cáo để `serving_champion_test` phản ánh đúng actual serving policy | ✅ **Hoàn thành** |
-| 🔴 **P0** | Giải thích Seasonal Naive $t-23\text{h}$ bằng công thức toán học tường minh | ✅ **Hoàn thành** |
-| 🔴 **P0** | Chuẩn hóa thuật ngữ split: Train + expanding CV / Calibration / Final Test | ✅ **Hoàn thành** |
-| 🔴 **P0** | Báo cáo Conformal test coverage (PICP) và độ rộng khoảng (MPIW) trên test set | ✅ **Hoàn thành** |
-| 🔴 **P0** | API và Predictor trả về `forecast_strategy` và cấu trúc `interval` chi tiết | ✅ **Hoàn thành** |
-| 🟠 **P1** | Bổ sung Ridge Autoregression baseline vào model selection | ✅ **Hoàn thành** |
-| 🟠 **P1** | Thêm các chỉ số chuẩn time-series: MASE và Skill Score vs Persistence | ✅ **Hoàn thành** |
-| 🟠 **P1** | Bổ sung trend deltas (`delta_1h`, `delta_3h`) và rolling std (`closed='left'`) | ✅ **Hoàn thành** |
-| 🟠 **P1** | Phân tích lỗi đa chiều Sliced Error Analysis (Station, Hour, Pollution level) | ✅ **Hoàn thành** |
-| 🟠 **P1** | Tự động sinh `model_version` từ timestamp + git SHA + data hash | ✅ **Hoàn thành** |
-| 🟠 **P1** | Xuất thêm artifact: `feature_schema.json` và `config_snapshot.yaml` | ✅ **Hoàn thành** |
-| 🟠 **P1** | Bộ 12 ca kiểm thử bắt buộc (Architectural Compliance Suite) | ✅ **Hoàn thành** |
-| 🟡 **P2** | Multi-horizon forecasting ($t+1, t+3, t+6, t+12, t+24\text{h}$) | ⏳ *Kế hoạch kế tiếp* |
-| 🟡 **P2** | Tích hợp nguồn dữ liệu quan trắc thực tế OpenAQ TP.HCM | ⏳ *Kế hoạch kế tiếp* |
-| 🟡 **P2** | Per-station Conformal Calibration & InfluxDB/TimescaleDB Storage | ⏳ *Kế hoạch kế tiếp* |
-| 🟡 **P3** | Benchmark Deep Learning chuyên dụng: Temporal Fusion Transformer / N-BEATS | ⏳ *Nghiên cứu sâu* |
+| 🔴 **P0.1** | Chống rò rỉ calibration: Triệt tiêu fallback sang Train/Test; bắt buộc calibration window độc lập | ✅ **Hoàn thành** |
+| 🔴 **P0.2** | Chuẩn hóa Finite-Sample Split-Conformal Quantile: $\text{rank} = \min(n, \lceil(n+1) \cdot \text{coverage}\rceil)$ | ✅ **Hoàn thành** |
+| 🔴 **P0.3** | Đồng nhất missing/gap policy giữa Train và Serving qua `regularize_hourly_series` | ✅ **Hoàn thành** |
+| 🔴 **P0.4** | Self-contained Predictor: `Predictor.from_artifact()` nạp config snapshot & schema từ artifact bundle | ✅ **Hoàn thành** |
+| 🔴 **P0.5** | Chuẩn hóa hợp đồng so sánh model: `models:` config riêng cho Ridge, RF, ExtraTrees, HistGB | ✅ **Hoàn thành** |
+| 🔴 **P0.6** | Minh bạch dữ liệu: Tách smoke test khỏi production validation; 4 trạng thái model tường minh | ✅ **Hoàn thành** |
+| 🟠 **P1.1** | Hệ thống Data Ingestion chuẩn hóa: `src/data/sources/` (CSV, AirQuality API, Weather API) | ✅ **Hoàn thành** |
+| 🟠 **P1.2** | Canonical Data Contract: `AirQualityDataset` cùng snapshot & manifest versioning | ✅ **Hoàn thành** |
+| 🟠 **P1.3** | Tiền xử lý tối ưu: Bỏ `StandardScaler` cho tree ensembles, chỉ giữ cho linear Ridge | ✅ **Hoàn thành** |
+| 🟠 **P1.4** | Station coverage & OOD warning: Cảnh báo suy luận trên trạm chưa từng học | ✅ **Hoàn thành** |
+| 🟠 **P1.5** | Versioned Artifact Directory: `artifacts/models/<version>/` + `production.json` + `split_manifest.json` | ✅ **Hoàn thành** |
+| 🟠 **P1.6** | Refactor modular: Tách thành các package chuyên biệt và Master CLI `src.pipeline` | ✅ **Hoàn thành** |
+| 🟡 **P2.1** | Rolling backtest đa tháng trên dữ liệu quan trắc dài hạn thực tế | ⏳ *Kế hoạch kế tiếp* |
+| 🟡 **P2.2** | Giám sát trôi dạt phân phối & tỷ lệ khuyết sensor (`src.monitoring.drift`) | ✅ **Hoàn thành khung** |
+| 🟡 **P2.3** | Multi-horizon forecasting ($t+1, t+3, t+6, t+12, t+24\text{h}$) | ⏳ *Kế hoạch kế tiếp* |
 
 ---
 
@@ -377,16 +376,19 @@ pip install -r requirements-dev.txt
 # Kiểm tra linting
 python -m ruff check src app tests
 
-# Chạy toàn bộ 37 ca kiểm thử
+# Chạy toàn bộ 46 ca kiểm thử (Lifecycle, Anti-Leakage, Ingestion, Serving)
 python -m pytest
 
 # Chạy kiểm định tính tái lập độc lập
 python -m pytest tests/test_reproducibility.py
 ```
 
-### 13.3 Huấn luyện & Sinh Báo Cáo
+### 13.3 Huấn luyện & Sinh Báo Cáo qua Master Pipeline
 ```bash
-# Huấn luyện mô hình và lưu artifacts
+# Huấn luyện qua Master Pipeline CLI
+python -m src.pipeline train --config configs/config.yaml
+
+# Hoặc qua legacy facade shim
 python -m src.train --config configs/config.yaml
 
 # Xuất báo cáo đánh giá chuyên sâu

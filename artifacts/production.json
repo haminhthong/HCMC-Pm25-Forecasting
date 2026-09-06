@@ -1,0 +1,8 @@
+{
+  "active_version": "pm25-20260906-15615c0-ed3c52b",
+  "updated_at": "2026-09-06T16:42:37.655566+00:00",
+  "production_readiness": "smoke_test_only",
+  "calibration_gate": "pass",
+  "artifact_path": "artifacts/models/pm25-20260906-15615c0-ed3c52b/model.joblib",
+  "version_dir": "artifacts/models/pm25-20260906-15615c0-ed3c52b"
+}
