@@ -71,6 +71,7 @@ def regularize_hourly_series(
 
     work = frame.copy()
     work[timestamp_column] = pd.to_datetime(work[timestamp_column], errors="coerce")
+    work = work.sort_values([*(group_columns or []), timestamp_column], kind="stable")
     if work[timestamp_column].isna().any():
         raise ValueError(
             "regularize_hourly_series phát hiện timestamp không parse được; "

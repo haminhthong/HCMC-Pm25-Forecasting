@@ -13,7 +13,10 @@ import pandas as pd
 
 from src.artifacts.schema import ForecastContext
 from src.artifacts.writer import save_artifacts
-from src.calibration.conformal import conformal_quantile, split_conformal_residuals
+from src.calibration.conformal import (
+    split_conformal_residuals,
+    station_conformal_quantiles,
+)
 from src.config import load_config
 from src.data.loader import load_air_quality, resolve_data_path
 from src.data.quality import audit_air_quality
@@ -91,7 +94,7 @@ def run_train_pipeline(
     )
 
     # 3. Time-ordered train / calibration / test split
-    test_fraction = config["split"]["test_fraction"]
+    test_fraction = config["split"].get("test_fraction")
     calibration_fraction = config["split"].get("calibration_fraction", 0.1)
     coverage_target = float(config["split"].get("coverage", DEFAULT_COVERAGE))
 
@@ -100,6 +103,9 @@ def run_train_pipeline(
         test_fraction=test_fraction,
         calibration_fraction=calibration_fraction,
         timestamp_column=timestamp,
+        train_end=config["split"].get("train_end"),
+        calibration_end=config["split"].get("calibration_end"),
+        test_end=config["split"].get("test_end"),
     )
 
     # P0.1 — zero calibration leakage
@@ -135,21 +141,36 @@ def run_train_pipeline(
     pipeline.fit(train_frame[columns], train_frame["target_next_hour"])
 
     # 6. Conformal Calibration on dedicated future calibration window (P0.1 + P0.2)
+    ml_cal_pred = pipeline.predict(cal_frame[columns])
     ml_cal_residuals = split_conformal_residuals(
         cal_frame["target_next_hour"],
-        pipeline.predict(cal_frame[columns]),
+        ml_cal_pred,
+    )
+    ml_global_q90, ml_station_q90 = station_conformal_quantiles(
+        cal_frame,
+        ml_cal_residuals,
+        station_column=station,
+        coverage=coverage_target,
+        minimum_samples=int(config.get("quality_gate", {}).get("minimum_calibration_samples_per_station", 20)),
     )
     pers_cal_residuals = split_conformal_residuals(
         cal_frame["target_next_hour"],
         persistence_predictions(cal_frame, target),
     )
-    ml_residual_q = conformal_quantile(ml_cal_residuals, coverage_target)
-    pers_residual_q = conformal_quantile(pers_cal_residuals, coverage_target)
+    pers_global_q90, pers_station_q90 = station_conformal_quantiles(
+        cal_frame,
+        pers_cal_residuals,
+        station_column=station,
+        coverage=coverage_target,
+        minimum_samples=int(config.get("quality_gate", {}).get("minimum_calibration_samples_per_station", 20)),
+    )
+    ml_residual_q = ml_global_q90
+    pers_residual_q = pers_global_q90
 
     # Calibration evaluation
     cal_ml_metrics = regression_and_classification_metrics(
         cal_frame["target_next_hour"],
-        pipeline.predict(cal_frame[columns]),
+        ml_cal_pred,
         config["thresholds"],
     )
     cal_pers_metrics = regression_and_classification_metrics(
@@ -159,8 +180,8 @@ def run_train_pipeline(
     )
 
     # Conformal calibration coverage check
-    cal_lower = np.maximum(0.0, pipeline.predict(cal_frame[columns]) - ml_residual_q)
-    cal_upper = pipeline.predict(cal_frame[columns]) + ml_residual_q
+    cal_lower = np.maximum(0.0, ml_cal_pred - ml_residual_q)
+    cal_upper = ml_cal_pred + ml_residual_q
     cal_picp = float(np.mean((cal_frame["target_next_hour"] >= cal_lower) & (cal_frame["target_next_hour"] <= cal_upper)))
 
     quality_gate = build_quality_gate(
@@ -218,12 +239,14 @@ def run_train_pipeline(
 
     serving_champion = candidate_champion if quality_gate["passes_baseline"] else "persistence"
     serving_residual_q = ml_residual_q if quality_gate["passes_baseline"] else pers_residual_q
+    serving_station_q90 = ml_station_q90 if quality_gate["passes_baseline"] else pers_station_q90
     serving_champion_pred = candidate_ml_pred if quality_gate["passes_baseline"] else pers_test_pred
     serving_champion_test = candidate_ml_test.copy() if quality_gate["passes_baseline"] else persistence_test.copy()
 
     # Conformal test interval evaluation
-    test_lower = np.maximum(0.0, serving_champion_pred - serving_residual_q)
-    test_upper = serving_champion_pred + serving_residual_q
+    test_quantiles = test_frame[station].map(serving_station_q90).fillna(serving_residual_q).to_numpy()
+    test_lower = np.maximum(0.0, serving_champion_pred - test_quantiles)
+    test_upper = serving_champion_pred + test_quantiles
     conformal_test_metrics = conformal_interval_metrics(
         test_frame["target_next_hour"], test_lower, test_upper
     )
@@ -234,7 +257,10 @@ def run_train_pipeline(
         serving_champion_pred,
         station,
         config["thresholds"],
-        conformal_residual_q90=serving_residual_q,
+        conformal_residual_q90={
+            str(key): serving_station_q90.get(str(key), serving_residual_q)
+            for key in test_frame[station].unique()
+        },
     )
     sliced_errors = sliced_error_analysis(
         test_frame,
@@ -303,20 +329,24 @@ def run_train_pipeline(
         "production_readiness": statuses["production_readiness"],
         "trained_stations": trained_stations,
         "prediction_interval": {
-            "method": "split_conformal",
+            "method": "split_conformal_prediction_interval",
             "residual_quantile": round(serving_residual_q, 4),
+            "global_q90": round(serving_residual_q, 4),
+            "station_q90": {key: round(value, 4) for key, value in serving_station_q90.items()},
             "coverage_target": coverage_target,
             "finite_sample_corrected": True,
         },
         "features": columns,
         "data_provenance": {
-            "data_path": str(data_path),
+            "dataset_snapshot_id": config["data"].get("snapshot_id", data_path.stem),
             "data_sha256": sha256_file(data_path),
             "rows_raw": int(len(raw)),
             "rows_train": int(len(train_frame)),
             "rows_calibration": int(len(cal_frame)),
             "rows_test": int(len(test_frame)),
             "smoke_only": is_smoke,
+            "storage_timezone": "UTC",
+            "calendar_timezone": config["data"].get("calendar_timezone", "Asia/Ho_Chi_Minh"),
         },
     }
 

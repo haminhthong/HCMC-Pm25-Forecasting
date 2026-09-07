@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from src.data.quality import validate_schema
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE, normalize_timestamp_series
 
 
 def resolve_data_path(configured_path: str | Path) -> Path:
@@ -33,17 +34,25 @@ def resolve_data_path(configured_path: str | Path) -> Path:
 
 
 def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
-    """Đọc dữ liệu bảng, chuẩn hóa timestamp và kiểm tra tính hợp lệ cơ bản."""
+    """Đọc dữ liệu, chuẩn hóa timestamp về UTC và kiểm tra schema cơ bản."""
     data_config = config["data"]
     path = resolve_data_path(data_config["path"])
     frame = pd.read_csv(path)
+    # Canonical v2 dùng station_id nhưng vẫn đọc được file legacy có cột station.
+    station = data_config["station_column"]
+    if station not in frame.columns:
+        legacy_alias = "station" if station == "station_id" else "station_id"
+        if legacy_alias in frame.columns:
+            frame = frame.rename(columns={legacy_alias: station})
     validate_schema(frame, data_config["required_columns"])
 
     timestamp = data_config["timestamp_column"]
-    station = data_config["station_column"]
     target = data_config["target_column"]
 
-    frame[timestamp] = pd.to_datetime(frame[timestamp], errors="coerce")
+    frame[timestamp] = normalize_timestamp_series(
+        frame[timestamp],
+        source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+    )
     if frame[timestamp].isna().any():
         raise ValueError("Cột timestamp chứa giá trị không hợp lệ hoặc không parse được.")
 

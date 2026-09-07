@@ -39,6 +39,17 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
     duplicate_mask = frame.duplicated([station, timestamp], keep=False)
     gap_audit = audit_hourly_gaps(frame, timestamp, group_columns=[station])
     physical_anomalies = validate_physical_ranges(frame)
+    tracked_columns = [target, *config.get("features", {}).get("exogenous_columns", [])]
+    missing_rate = {
+        column: float(frame[column].isna().mean())
+        for column in tracked_columns
+        if column in frame.columns
+    }
+    availability_violations = 0
+    if "available_at" in frame.columns:
+        observed_at = pd.to_datetime(frame[timestamp], errors="coerce")
+        available_at = pd.to_datetime(frame["available_at"], errors="coerce")
+        availability_violations = int((available_at > observed_at).sum())
 
     return {
         "rows": int(len(frame)),
@@ -50,5 +61,7 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
         "irregular_hourly_gaps": gap_audit["irregular_hourly_gaps"],
         "total_gaps_observed": gap_audit["total_gaps_observed"],
         "physical_anomalies": physical_anomalies,
+        "missing_rate": missing_rate,
+        "availability_violations": availability_violations,
         "columns": list(frame.columns),
     }

@@ -1,7 +1,7 @@
 # 🌫️ HCMC Air Quality Forecasting Platform
 ### Leakage-Safe Next-Hour PM2.5 Forecasting for Ho Chi Minh City with Temporal Backtesting, Persistence-Aware Model Selection, Calibrated Conformal Uncertainty, Quality Gate Guardrails & Production Serving
 
-Dự án là một **Leakage-Safe Temporal ML Forecasting System** hoàn chỉnh được thiết kế chuyên sâu cho bài toán dự báo nồng độ bụi mịn PM2.5 giờ tiếp theo ($t \rightarrow t+1$) theo từng trạm quan trắc tại TP.HCM. Hệ thống giải quyết trọn vẹn các bài toán hóc búa của chuỗi thời gian thực tế: tra cứu lag theo mốc thời gian thực, rolling thống kê không nhìn trước tương lai, expanding-window cross-validation lồng nhau, so sánh baseline persistence, hiệu chuẩn khoảng tin cậy Split Conformal độc lập, cơ chế Quality Gate guardrail tự động fallback, REST API và Dashboard giám sát độ tin cậy.
+Dự án là một **Leakage-Safe Temporal ML Forecasting System** cho bài toán nowcasting PM2.5 giờ tiếp theo ($t \rightarrow t+1$) theo từng trạm quan trắc tại TP.HCM. Hệ thống dùng exact clock-time lookup, rolling causal, expanding-window backtest, baseline persistence, prediction interval Split Conformal, Quality Gate fallback, REST API và dashboard.
 
 > ⚠️ **Tuyên bố về Dữ liệu & Định vị Prototype:** Dữ liệu hiện tại (`data/sample/air_quality_sample.csv`) phục vụ **System Validation Prototype** nhằm kiểm tra tính an toàn về rò rỉ dữ liệu, API, CI, artifact và pipeline Conformal; chưa đại diện cho hiệu năng ô nhiễm không khí thực tế của toàn bộ TP.HCM. Các ngưỡng Thấp/Trung bình/Cao là phân nhóm phân tích thử nghiệm nội bộ, không thay thế cho chỉ số AQI chính thức.
 
@@ -94,7 +94,7 @@ flowchart TD
 ### 3.1 Clock-Time Lag, Not Row-Position Lag
 Nhiều bài toán time-series sinh viên mắc lỗi dùng `df['pm25'].shift(24)`. Nếu dữ liệu bị mất kết nối 3 giờ, hàm `shift(24)` sẽ lấy nhầm quan trắc cách đó 27 giờ thực tế.
 - Trong repo này, mọi lag được tra cứu theo khóa mốc thời gian thực:
-  $$\text{Key} = (\text{station}, \text{timestamp} - \text{lag})$$
+  $$\text{Key} = (\text{station\_id}, \text{timestamp} - \text{lag})$$
 - Nếu thiếu dữ liệu tại mốc thời gian chính xác đó, đặc trưng nhận giá trị `NaN` thay vì lấy nhầm hàng gần nhất.
 
 ### 3.2 Rolling Window với `closed="left"` vs Current PM2.5
@@ -151,7 +151,7 @@ Toàn bộ chuỗi thời gian (Full Data Timeline)
 
 1. **Train Set**: Chứa các chuỗi thời gian ban đầu để xây dựng mô hình và tối ưu siêu tham số thông qua Expanding-Window Cross-Validation.
 2. **Independent Calibration Set**: Tập dữ liệu nằm kế tiếp tập Train theo thứ tự thời gian. Dùng để:
-   - Hiệu chuẩn phần dư tính toán khoảng tin cậy Conformal Prediction.
+   - Hiệu chuẩn phần dư để tạo prediction interval Conformal.
    - Thẩm định Quality Gate khách quan mà không làm thiên lệch kết quả kiểm định cuối.
 3. **Final Test Set**: Tập dữ liệu tương lai cuối cùng chưa từng được tiếp xúc trong bất kỳ khâu huấn luyện hay hiệu chuẩn nào.
 
@@ -194,15 +194,15 @@ Báo cáo thử nghiệm trên tập dữ liệu kiểm thử kỹ thuật (`air
 
 ## 8. 🎯 Hiệu Chuẩn Khoảng Tin Cậy Conformal (Conformal Prediction)
 
-Thay vì chỉ dự báo một con số điểm (point forecast), hệ thống cung cấp khoảng tin cậy có bảo đảm toán học bằng phương pháp **Split Conformal Prediction**:
+Thay vì chỉ dự báo một con số điểm (point forecast), hệ thống cung cấp prediction interval bằng **Split Conformal Prediction**. Coverage được hiệu chuẩn trên một future calibration window và phải được theo dõi trên các block thời gian tiếp theo; không coi đây là bảo đảm vô điều kiện trên time series.
 $$\hat{C}(X_{t+1}) = [\hat{y}_{t+1} - q_{90}, \; \hat{y}_{t+1} + q_{90}]$$
 Trong đó $q_{90}$ là quantile bậc 90% của phân phối phần dư tuyệt đối tính trên **tập Calibration độc lập**.
 
 ### 8.1 Kết quả kiểm định thực tế trên tập Test cuối:
 - **Độ phủ mục tiêu (Target Coverage):** $90.0\%$
 - **Độ phủ thực tế trên tập Test (PICP):** $75.0\%$ *(trên mẫu thử nghiệm test nhỏ)*
-- **Độ rộng khoảng tin cậy trung bình (MPIW):** $0.650 \;\mu\text{g/m}^3$ ($\pm 0.325 \;\mu\text{g/m}^3$)
-- **Độ rộng khoảng tin cậy trung vị:** $0.650 \;\mu\text{g/m}^3$
+- **Độ rộng prediction interval trung bình (MPIW):** đọc từ `evaluation.json` của artifact tương ứng.
+- **Độ rộng prediction interval trung vị:** đọc từ `evaluation.json` của artifact tương ứng.
 
 ### 8.2 Độ phủ phân rã theo từng trạm:
 - **Trạm A**: PICP = $75.0\%$, MPIW = $\pm 0.325 \;\mu\text{g/m}^3$
@@ -289,7 +289,7 @@ uvicorn app.api:app --reload --port 8000
 **Contract phản hồi chuẩn (`PredictionResponse`):**
 ```json
 {
-  "station": "Trạm A",
+  "station_id": "Trạm A",
   "forecast_origin": "2024-01-02T10:00:00",
   "forecast_for": "2024-01-02T11:00:00",
   "current_pm25": 32.1,
@@ -350,7 +350,7 @@ Hệ thống tích hợp bộ unit test nghiêm ngặt tại `tests/test_audit_a
 | 🟠 **P1.2** | Canonical Data Contract: `AirQualityDataset` cùng snapshot & manifest versioning | ✅ **Hoàn thành** |
 | 🟠 **P1.3** | Tiền xử lý tối ưu: Bỏ `StandardScaler` cho tree ensembles, chỉ giữ cho linear Ridge | ✅ **Hoàn thành** |
 | 🟠 **P1.4** | Station coverage & OOD warning: Cảnh báo suy luận trên trạm chưa từng học | ✅ **Hoàn thành** |
-| 🟠 **P1.5** | Versioned Artifact Directory: `artifacts/models/<version>/` + `production.json` + `split_manifest.json` | ✅ **Hoàn thành** |
+| 🟠 **P1.5** | Versioned Artifact Directory: `artifacts/models/<version>/` + `active_release.json` + `split_manifest.json` | ✅ **Hoàn thành** |
 | 🟠 **P1.6** | Refactor modular: Tách thành các package chuyên biệt và Master CLI `src.pipeline` | ✅ **Hoàn thành** |
 | 🟡 **P2.1** | Rolling backtest đa tháng trên dữ liệu quan trắc dài hạn thực tế | ⏳ *Kế hoạch kế tiếp* |
 | 🟡 **P2.2** | Giám sát trôi dạt phân phối & tỷ lệ khuyết sensor (`src.monitoring.drift`) | ✅ **Hoàn thành khung** |

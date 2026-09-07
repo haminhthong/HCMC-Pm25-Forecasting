@@ -14,8 +14,11 @@ import yaml
 from src.artifacts.loader import load_artifact_bundle
 from src.artifacts.schema import ForecastContext
 from src.data.regularization import regularize_hourly_series
+from src.data.runtime_gate import audit_runtime_history
+from src.data.schema import normalize_timestamp_series
 from src.evaluate import classify_pm25, get_threshold_params
 from src.features.builder import build_features, model_feature_columns
+from src.monitoring.forecast_log import append_forecast_event
 
 
 class Predictor:
@@ -102,7 +105,12 @@ class Predictor:
         schema_features = self._feature_schema.get("model_feature_columns")
         if not schema_features:
             return
-        live_features = model_feature_columns(self.config)
+        # Schema artifact lưu cả numeric features và categorical station key,
+        # đúng với thứ tự columns mà make_pipeline trả về.
+        live_features = [
+            *model_feature_columns(self.config),
+            self.config["data"]["station_column"],
+        ]
         if list(schema_features) != list(live_features):
             raise RuntimeError(
                 "feature_schema.json và configs/config.yaml không đồng bộ. "
@@ -129,7 +137,12 @@ class Predictor:
 
         # 1. P0.3: Regularize hourly series instead of rejecting irregular gaps
         work = observations.copy()
-        work[timestamp_col] = pd.to_datetime(work[timestamp_col])
+        work[timestamp_col] = normalize_timestamp_series(
+            work[timestamp_col],
+            source_timezone=self.config.get("data", {}).get(
+                "source_timezone", self.forecast_context.timezone
+            ),
+        )
         if work[timestamp_col].duplicated().any():
             raise ValueError("Chuỗi quan sát chứa timestamp trùng lặp.")
 
@@ -146,6 +159,20 @@ class Predictor:
                 f"nhận {len(work)}."
             )
 
+        runtime_quality = audit_runtime_history(
+            work,
+            timestamp_column=timestamp_col,
+            target_column=target_col,
+            required_history_hours=min_required,
+            allowed_gap_hours=self.forecast_context.allowed_gap_hours,
+            exogenous_columns=self.config.get("features", {}).get("exogenous_columns", []),
+        )
+        if runtime_quality["status"] == "UNUSABLE":
+            raise ValueError(
+                "Dữ liệu hiện tại không đủ để dự báo an toàn: "
+                + ", ".join(runtime_quality["warnings"] or ["runtime_data_unusable"])
+            )
+
         # 2. Build features on regularized series
         featured = build_features(work, self.config, include_target=False)
         latest_row = featured.iloc[[-1]]
@@ -157,6 +184,10 @@ class Predictor:
         # 3. Serving champion strategy
         serving_strategy = self.metadata.get("serving_strategy", "ml_model")
         serving_champion = self.metadata.get("serving_champion", self.metadata.get("model_name", "model"))
+        if runtime_quality["fallback_required"]:
+            serving_strategy = "persistence_fallback"
+            serving_champion = "persistence"
+
         if serving_strategy == "persistence_fallback" or serving_champion == "persistence":
             predicted_pm25 = float(current_val)
         else:
@@ -168,7 +199,10 @@ class Predictor:
 
         # 4. Conformal Prediction Interval
         interval_info = self.metadata.get("prediction_interval", {})
-        residual_q = float(interval_info.get("residual_quantile", 5.0))
+        station_q90 = interval_info.get("station_q90", {})
+        residual_q = float(
+            station_q90.get(station_name, interval_info.get("global_q90", interval_info.get("residual_quantile", 5.0)))
+        )
         coverage_val = float(
             interval_info.get("coverage", interval_info.get("coverage_target", 0.90))
         )
@@ -182,8 +216,9 @@ class Predictor:
         forecast_origin_ts = pd.to_datetime(latest_row[timestamp_col].values[0])
         forecast_for_ts = forecast_origin_ts + pd.to_timedelta(self.forecast_context.horizon_hours, unit="h")
 
-        return {
+        result = {
             "station": station_name,
+            "station_id": station_name,
             "forecast_origin": str(forecast_origin_ts),
             "forecast_for": str(forecast_for_ts),
             "current_pm25": float(current_val),
@@ -193,7 +228,7 @@ class Predictor:
             "serving_champion": serving_champion,
             "is_out_of_distribution": is_ood_station,
             "interval": {
-                "method": "split_conformal",
+                "method": interval_info.get("method", "split_conformal_prediction_interval"),
                 "coverage_target": coverage_val,
                 "coverage": coverage_val,
                 "lower": round(lower, 2),
@@ -204,4 +239,29 @@ class Predictor:
             "updated_at": datetime.now(UTC).isoformat(),
             "production_readiness": self.metadata.get("production_readiness", "unknown"),
             "calibration_gate": self.metadata.get("calibration_gate", "unknown"),
+            "data_quality": runtime_quality,
         }
+        log_path = self.config.get("monitoring", {}).get("forecast_log_path")
+        if log_path:
+            append_forecast_event(
+                {
+                    "forecast_id": (
+                        f"{self.metadata.get('model_version', 'unknown')}:"
+                        f"{station_name}:{forecast_origin_ts.isoformat()}"
+                    ),
+                    "model_version": result["model_version"],
+                    "station_id": station_name,
+                    "forecast_origin": forecast_origin_ts.isoformat(),
+                    "forecast_for": forecast_for_ts.isoformat(),
+                    "current_pm25": float(current_val),
+                    "prediction": result["predicted_pm25"],
+                    "lower": result["interval"]["lower"],
+                    "upper": result["interval"]["upper"],
+                    "strategy": serving_strategy,
+                    "data_quality_status": runtime_quality["status"],
+                    "created_at": result["updated_at"],
+                    "persistence_prediction": float(current_val),
+                },
+                log_path,
+            )
+        return result

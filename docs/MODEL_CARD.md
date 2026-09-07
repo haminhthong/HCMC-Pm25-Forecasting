@@ -3,7 +3,7 @@
 ## 1. Mục Đích & Phạm Vi Nghiệp Vụ (Model Details)
 
 - **Bài toán**: Dự báo nồng độ ô nhiễm bụi mịn PM2.5 giờ tiếp theo ($t \rightarrow t+1$) theo từng trạm quan trắc đơn lẻ tại TP.HCM.
-- **Mục tiêu kỹ thuật**: Cung cấp dự báo điểm (point prediction) kèm khoảng tin cậy hiệu chuẩn (Calibrated Conformal Prediction Interval 90%) có bảo đảm toán học, tích hợp cơ chế Quality Gate tự động fallback về Persistence Baseline khi mô hình học máy không vượt qua ngưỡng an toàn.
+- **Mục tiêu kỹ thuật**: Cung cấp dự báo điểm kèm prediction interval 90% được hiệu chuẩn trên future calibration window, tích hợp Quality Gate fallback về Persistence Baseline khi mô hình không vượt baseline. Coverage được monitor theo block thời gian, không claim bảo đảm vô điều kiện cho time series.
 - **Phạm vi sử dụng**: Artifact phục vụ trình diễn kỹ thuật Machine Learning Engineering, MLOps, dự báo chuỗi thời gian chống data leakage; không thay thế cho hệ thống cảnh báo sức khỏe môi trường chính thức của cơ quan nhà nước.
 
 ---
@@ -12,13 +12,13 @@
 
 ### 2.1 Đầu vào (Input Schema per Single-Station Request):
 - `timestamp`: Chuỗi thời gian chuẩn ISO 8601, tăng dần và liên tục theo từng giờ ($\Delta t = 1\text{h}$).
-- `station`: Tên định danh trạm quan trắc (duy nhất 1 trạm/request).
+- `station_id`: Tên định danh trạm quan trắc (duy nhất 1 trạm/request).
 - `PM2.5`: Nồng độ PM2.5 tại mốc thời điểm hiện tại $t$ ($\ge 0 \;\mu\text{g/m}^3$).
 - **Lịch sử tối thiểu**: 25 quan trắc giờ liên tục để phục vụ tạo lag 24h và rolling window 24h.
 - **Biến ngoại sinh tùy chọn**: $O_3$, $SO_2$, $NO_2$, $CO$, $TSP$, nhiệt độ, độ ẩm (nếu thiếu, pipeline tự động điền median bằng SimpleImputer).
 
 ### 2.2 Đầu ra (Standard Output Schema):
-- `station`: Tên trạm quan trắc.
+- `station_id`: Tên trạm quan trắc.
 - `forecast_origin`: Mốc thời điểm hiện tại $t$ của quan trắc.
 - `forecast_for`: Mốc thời điểm $t+1\text{h}$ được dự báo.
 - `current_pm25`: Nồng độ PM2.5 hiện tại tại $t$.
@@ -29,9 +29,9 @@
 - `interval`:
   - `method`: `"split_conformal"`
   - `coverage_target`: `0.9` (90% target coverage)
-  - `lower`: Cận dưới khoảng tin cậy ($\ge 0.0$).
-  - `upper`: Cận trên khoảng tin cậy.
-  - `width`: Độ rộng khoảng tin cậy ($2 \times q_{90}$).
+  - `lower`: Cận dưới prediction interval ($\ge 0.0$).
+  - `upper`: Cận trên prediction interval.
+  - `width`: Độ rộng prediction interval ($2 \times q_{90}$).
 - `model_version`: Mã định danh phiên bản tự động (`pm25-YYYYMMDD-<git_sha>-<data_hash>`).
 - `updated_at`: Thời điểm hệ thống sinh dự báo.
 
@@ -41,7 +41,7 @@
 
 1. **Data Ingestion & Audit**: Kiểm tra schema, tính đơn điệu của timestamp, phát hiện trùng lặp hoặc khoảng trống giờ bất thường.
 2. **Time-Aware Feature Engineering**:
-   - Clock-time lag: tra cứu theo $(station, timestamp - lag)$, không dùng shift theo vị trí dòng.
+   - Clock-time lag: tra cứu theo $(station\_id, timestamp - lag)$, không dùng shift theo vị trí dòng.
    - Rolling statistics (mean, std): sử dụng `closed="left"` để chỉ tính lịch sử trước $t$.
    - Trend deltas: chênh lệch $y_t - y_{t-1\text{h}}$ và $y_t - y_{t-3\text{h}}$.
    - Cyclic time encoding: $\sin/\cos(2\pi \cdot \text{hour}/24)$, day of week.

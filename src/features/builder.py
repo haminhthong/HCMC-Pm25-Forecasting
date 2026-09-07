@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from src.features.exogenous import prepare_exogenous_columns
+from src.features.exogenous import lookup_feature_at_offset, prepare_exogenous_columns
 from src.features.lag import lookup_pm25_at_offset
 from src.features.rolling import add_rolling_features, add_trend_features
 from src.features.temporal import add_time_features
@@ -44,6 +44,18 @@ def build_features(
     timestamp = data_config["timestamp_column"]
     target = data_config["target_column"]
     result = frame.sort_values([station, timestamp], kind="stable").copy()
+    label_source = result.copy()
+
+    # Feature hiện tại cũng phải tuân thủ available_at. Nhãn t+1 bên dưới
+    # được lookup riêng và không bị giới hạn bởi thời điểm phát hành nhãn.
+    if "available_at" in result.columns:
+        result[target] = lookup_feature_at_offset(
+            result,
+            station,
+            timestamp,
+            target,
+            offset_hours=0,
+        )
 
     # 1. Clock-time lags: tra cứu theo số giờ thực tế, không dịch chuyển vị trí dòng
     for lag in config["features"]["lags"]:
@@ -71,7 +83,11 @@ def build_features(
     )
 
     # 4. Cyclic time features
-    result = add_time_features(result, timestamp)
+    result = add_time_features(
+        result,
+        timestamp,
+        calendar_timezone=config.get("data", {}).get("calendar_timezone", "Asia/Ho_Chi_Minh"),
+    )
 
     # 5. Exogenous features availability
     result = prepare_exogenous_columns(result, config)
@@ -85,21 +101,25 @@ def build_features(
     if include_target:
         result["target_timestamp"] = result[timestamp] + pd.to_timedelta(1, unit="h")
         result["target_next_hour"] = lookup_pm25_at_offset(
-            result,
+            label_source,
             station,
             timestamp,
             target,
             offset_hours=1,
+            # Target tương lai là nhãn quan sát, không phải feature tại t.
+            # Không dùng available_at của t để loại nhãn t+1.
+            enforce_availability=False,
         )
         # Seasonal Naive 24h cho target(t+1):
         # \hat{y}_{t+1}^{seasonal24} = y_{(t+1)-24} = y_{t-23}
         # Tra cứu quan trắc tại cùng trạm ở mốc t - 23h.
         result["seasonal_naive_24h"] = lookup_pm25_at_offset(
-            result,
+            label_source,
             station,
             timestamp,
             target,
             offset_hours=-23,
+            enforce_availability=False,
         )
     return result
 

@@ -20,6 +20,7 @@ import math
 from collections.abc import Sequence
 
 import numpy as np
+import pandas as pd
 
 
 def conformal_quantile(residuals: Sequence[float] | np.ndarray, coverage: float) -> float:
@@ -72,3 +73,25 @@ def split_conformal_residuals(y_true: Sequence[float], y_pred: Sequence[float]) 
             f"y_true và y_pred phải cùng shape; nhận {y_true_arr.shape} vs {y_pred_arr.shape}."
         )
     return np.abs(y_true_arr - y_pred_arr)
+
+
+def station_conformal_quantiles(
+    frame: pd.DataFrame,
+    residuals: Sequence[float] | np.ndarray,
+    *,
+    station_column: str,
+    coverage: float,
+    minimum_samples: int = 20,
+) -> tuple[float, dict[str, float]]:
+    """Tính q theo trạm và fallback về q toàn cục khi mẫu quá ít."""
+    residual_array = np.asarray(residuals, dtype=float)
+    if len(frame) != len(residual_array):
+        raise ValueError("frame và residuals phải có cùng số dòng.")
+    frame = frame.reset_index(drop=True)
+    global_q = conformal_quantile(residual_array, coverage)
+    station_q: dict[str, float] = {}
+    for station, indexes in frame.groupby(station_column, sort=False).groups.items():
+        values = residual_array[np.asarray(list(indexes), dtype=int)]
+        if len(values) >= minimum_samples:
+            station_q[str(station)] = conformal_quantile(values, coverage)
+    return global_q, station_q

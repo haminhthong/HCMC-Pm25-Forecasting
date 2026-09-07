@@ -8,7 +8,7 @@ from typing import Any
 
 import pandas as pd
 
-from src.data.schema import AirQualityDataset
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE, AirQualityDataset, normalize_timestamp_series
 from src.data.sources.base import BaseSource
 from src.utils import sha256_file
 
@@ -40,9 +40,18 @@ class HistoricalCSVSource(BaseSource):
         if "station" in df.columns and "station_id" not in df.columns:
             df["station_id"] = df["station"]
 
-        # Parse timestamps to UTC/ISO
+        # Timestamp nội bộ luôn là UTC; giờ không có timezone được hiểu là giờ TP.HCM.
         if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df["timestamp"] = normalize_timestamp_series(
+                df["timestamp"],
+                source_timezone=kwargs.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+            )
+
+        if "available_at" in df.columns:
+            df["available_at"] = normalize_timestamp_series(
+                df["available_at"],
+                source_timezone=kwargs.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+            )
 
         snap_id = self.snapshot_id or f"csv-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
         file_hash = sha256_file(self.filepath)
@@ -52,5 +61,5 @@ class HistoricalCSVSource(BaseSource):
             source=f"csv:{self.filepath.name}",
             snapshot_id=snap_id,
             frequency="1h",
-            metadata={"filepath": str(self.filepath), "sha256": file_hash},
+            metadata={"source_filename": self.filepath.name, "sha256": file_hash},
         )

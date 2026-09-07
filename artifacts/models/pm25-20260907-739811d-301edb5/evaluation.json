@@ -1,0 +1,1386 @@
+{
+  "data_audit": {
+    "rows": 72,
+    "stations": 2,
+    "period": [
+      "2023-12-31 17:00:00+00:00",
+      "2024-01-02 04:00:00+00:00"
+    ],
+    "duplicate_station_timestamps": 0,
+    "missing_target": 0,
+    "negative_target": 0,
+    "irregular_hourly_gaps": 0,
+    "total_gaps_observed": 70,
+    "physical_anomalies": {},
+    "missing_rate": {
+      "PM2.5": 0.0,
+      "TSP": 0.0,
+      "NO2": 0.0,
+      "SO2": 0.1111111111111111,
+      "CO": 0.0,
+      "O3": 0.08333333333333333,
+      "temperature": 0.0,
+      "humidity": 0.0
+    },
+    "availability_violations": 0,
+    "columns": [
+      "timestamp",
+      "station_id",
+      "PM2.5",
+      "TSP",
+      "NO2",
+      "SO2",
+      "CO",
+      "O3",
+      "temperature",
+      "humidity"
+    ]
+  },
+  "split_manifest": {
+    "train": {
+      "start": "2023-12-31 17:00:00+00:00",
+      "end": "2024-01-01 18:00:00+00:00"
+    },
+    "calibration": {
+      "start": "2024-01-01 20:00:00+00:00",
+      "end": "2024-01-01 22:00:00+00:00"
+    },
+    "test": {
+      "start": "2024-01-02 00:00:00+00:00",
+      "end": "2024-01-02 03:00:00+00:00"
+    },
+    "stations": [
+      "Trạm A",
+      "Trạm B"
+    ],
+    "rows": {
+      "train": 52,
+      "calibration": 6,
+      "test": 8
+    }
+  },
+  "baselines": {
+    "persistence": {
+      "mae": 0.25,
+      "rmse": 0.29231831964486954,
+      "bias": 0.14999999999999947,
+      "p90_absolute_error": 0.4699999999999999,
+      "macro_f1": 0.6666666666666666,
+      "macro_f1_all_configured_classes": 0.6666666666666666,
+      "macro_f1_observed_classes": 1.0,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 4,
+        "Cao": 4
+      },
+      "observed_classes": [
+        "Trung bình",
+        "Cao"
+      ],
+      "qwk": 1.0,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          4
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        },
+        "Cao": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.6666666666666666,
+          "support": 8.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        }
+      },
+      "high_pm25_mae": 0.25,
+      "high_pm25_recall": 1.0,
+      "mase": 1.0,
+      "skill_score_vs_persistence": 0.0
+    },
+    "seasonal_naive_24h": {
+      "mae": 5.947500000000002,
+      "rmse": 5.952488975210287,
+      "bias": -5.947500000000002,
+      "p90_absolute_error": 6.250000000000001,
+      "macro_f1": 0.2222222222222222,
+      "macro_f1_all_configured_classes": 0.2222222222222222,
+      "macro_f1_observed_classes": 0.3333333333333333,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 4,
+        "Cao": 4
+      },
+      "observed_classes": [
+        "Trung bình",
+        "Cao"
+      ],
+      "qwk": 0.0,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          4,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1-score": 0.6666666666666666,
+          "support": 4.0
+        },
+        "Cao": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 4.0
+        },
+        "accuracy": 0.5,
+        "macro avg": {
+          "precision": 0.16666666666666666,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.2222222222222222,
+          "support": 8.0
+        },
+        "weighted avg": {
+          "precision": 0.25,
+          "recall": 0.5,
+          "f1-score": 0.3333333333333333,
+          "support": 8.0
+        }
+      },
+      "high_pm25_mae": 5.947500000000002,
+      "high_pm25_recall": 0.0,
+      "mase": 23.790000000000006,
+      "skill_score_vs_persistence": -22.790000000000006
+    }
+  },
+  "backtest": {
+    "ridge": {
+      "folds": [
+        {
+          "mae": 0.318515037063689,
+          "rmse": 0.3241259219524431,
+          "bias": 0.318515037063689,
+          "p90_absolute_error": 0.39995865336352737,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 10,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              10,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 10.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        },
+        {
+          "mae": 0.289366777671561,
+          "rmse": 0.31962859730489923,
+          "bias": -0.289366777671561,
+          "p90_absolute_error": 0.4998928980551341,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 10,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              10,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 10.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        },
+        {
+          "mae": 0.5356502323543539,
+          "rmse": 0.5462556430937365,
+          "bias": -0.5356502323543539,
+          "p90_absolute_error": 0.6557440857198589,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 8,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              8,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 8.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 8.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 8.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        }
+      ],
+      "mae_mean": 0.381177349029868,
+      "mae_std": 0.10987510794331562,
+      "rmse_mean": 0.39667005411702627,
+      "residual_quantile_90": 0.6547249914419346
+    },
+    "hist_gradient_boosting": {
+      "folds": [
+        {
+          "mae": 4.5,
+          "rmse": 5.481796381684378,
+          "bias": 3.021454545454546,
+          "p90_absolute_error": 8.218454545454547,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 10,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              10,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 10.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        },
+        {
+          "mae": 4.5,
+          "rmse": 5.259172611970442,
+          "bias": 2.623250000000001,
+          "p90_absolute_error": 7.754250000000001,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 10,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              10,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 10.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 10.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        },
+        {
+          "mae": 3.3296311567607604,
+          "rmse": 3.4756454789985125,
+          "bias": -3.3296311567607604,
+          "p90_absolute_error": 4.273178680814178,
+          "macro_f1": 0.3333333333333333,
+          "macro_f1_all_configured_classes": 0.3333333333333333,
+          "macro_f1_observed_classes": 1.0,
+          "support_by_class": {
+            "Thấp": 0,
+            "Trung bình": 8,
+            "Cao": 0
+          },
+          "observed_classes": [
+            "Trung bình"
+          ],
+          "qwk": null,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              8,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "classification_report": {
+            "Thấp": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "Trung bình": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 8.0
+            },
+            "Cao": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 0.0
+            },
+            "accuracy": 1.0,
+            "macro avg": {
+              "precision": 0.3333333333333333,
+              "recall": 0.3333333333333333,
+              "f1-score": 0.3333333333333333,
+              "support": 8.0
+            },
+            "weighted avg": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 8.0
+            }
+          },
+          "high_pm25_mae": null,
+          "high_pm25_recall": 0.0
+        }
+      ],
+      "mae_mean": 4.109877052253586,
+      "mae_std": 0.5517171636959478,
+      "rmse_mean": 4.738871490884445,
+      "residual_quantile_90": 8.185454545454547
+    }
+  },
+  "calibration": {
+    "ml_metrics": {
+      "mae": 0.27916913359615475,
+      "rmse": 0.2843634508132223,
+      "bias": -0.27916913359615475,
+      "p90_absolute_error": 0.3252286262264601,
+      "macro_f1": 0.6666666666666666,
+      "macro_f1_all_configured_classes": 0.6666666666666666,
+      "macro_f1_observed_classes": 1.0,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 3,
+        "Cao": 3
+      },
+      "observed_classes": [
+        "Trung bình",
+        "Cao"
+      ],
+      "qwk": 1.0,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 3.0
+        },
+        "Cao": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 3.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.6666666666666666,
+          "support": 6.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 6.0
+        }
+      },
+      "high_pm25_mae": 0.27669858025512895,
+      "high_pm25_recall": 1.0
+    },
+    "persistence_metrics": {
+      "mae": 0.8700000000000004,
+      "rmse": 0.8830439777647925,
+      "bias": -0.8700000000000004,
+      "p90_absolute_error": 1.049999999999999,
+      "macro_f1": 0.5523809523809523,
+      "macro_f1_all_configured_classes": 0.5523809523809523,
+      "macro_f1_observed_classes": 0.8285714285714285,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 3,
+        "Cao": 3
+      },
+      "observed_classes": [
+        "Trung bình",
+        "Cao"
+      ],
+      "qwk": 0.6666666666666667,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1-score": 0.8571428571428571,
+          "support": 3.0
+        },
+        "Cao": {
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.8,
+          "support": 3.0
+        },
+        "accuracy": 0.8333333333333334,
+        "macro avg": {
+          "precision": 0.5833333333333334,
+          "recall": 0.5555555555555555,
+          "f1-score": 0.5523809523809523,
+          "support": 6.0
+        },
+        "weighted avg": {
+          "precision": 0.875,
+          "recall": 0.8333333333333334,
+          "f1-score": 0.8285714285714286,
+          "support": 6.0
+        }
+      },
+      "high_pm25_mae": 0.8699999999999998,
+      "high_pm25_recall": 0.6666666666666666
+    },
+    "ml_residual_quantile": 0.3276991795674853,
+    "persistence_residual_quantile": 1.0500000000000007,
+    "ml_residual_quantile_90": 0.3276991795674853,
+    "persistence_residual_quantile_90": 1.0500000000000007,
+    "calibration_rows": 6,
+    "calibration_window": [
+      "2024-01-01 20:00:00+00:00",
+      "2024-01-01 22:00:00+00:00"
+    ],
+    "conformal_quantile_method": "finite_sample_split_conformal",
+    "coverage_target": 0.9,
+    "calibration_picp": 1.0
+  },
+  "candidate_ml_test": {
+    "mae": 0.31596576071541627,
+    "rmse": 0.3167288628807711,
+    "bias": -0.31596576071541627,
+    "p90_absolute_error": 0.3440922464390038,
+    "macro_f1": 0.6666666666666666,
+    "macro_f1_all_configured_classes": 0.6666666666666666,
+    "macro_f1_observed_classes": 1.0,
+    "support_by_class": {
+      "Thấp": 0,
+      "Trung bình": 4,
+      "Cao": 4
+    },
+    "observed_classes": [
+      "Trung bình",
+      "Cao"
+    ],
+    "qwk": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "classification_report": {
+      "Thấp": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Trung bình": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "Cao": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.6666666666666666,
+        "support": 8.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      }
+    },
+    "high_pm25_mae": 0.3134952073743964,
+    "high_pm25_recall": 1.0,
+    "mase": 1.263863042861665,
+    "skill_score_vs_persistence": -0.26386304286166506
+  },
+  "persistence_test": {
+    "mae": 0.25,
+    "rmse": 0.29231831964486954,
+    "bias": 0.14999999999999947,
+    "p90_absolute_error": 0.4699999999999999,
+    "macro_f1": 0.6666666666666666,
+    "macro_f1_all_configured_classes": 0.6666666666666666,
+    "macro_f1_observed_classes": 1.0,
+    "support_by_class": {
+      "Thấp": 0,
+      "Trung bình": 4,
+      "Cao": 4
+    },
+    "observed_classes": [
+      "Trung bình",
+      "Cao"
+    ],
+    "qwk": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "classification_report": {
+      "Thấp": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Trung bình": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "Cao": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.6666666666666666,
+        "support": 8.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      }
+    },
+    "high_pm25_mae": 0.25,
+    "high_pm25_recall": 1.0,
+    "mase": 1.0,
+    "skill_score_vs_persistence": 0.0
+  },
+  "seasonal_naive_test": {
+    "mae": 5.947500000000002,
+    "rmse": 5.952488975210287,
+    "bias": -5.947500000000002,
+    "p90_absolute_error": 6.250000000000001,
+    "macro_f1": 0.2222222222222222,
+    "macro_f1_all_configured_classes": 0.2222222222222222,
+    "macro_f1_observed_classes": 0.3333333333333333,
+    "support_by_class": {
+      "Thấp": 0,
+      "Trung bình": 4,
+      "Cao": 4
+    },
+    "observed_classes": [
+      "Trung bình",
+      "Cao"
+    ],
+    "qwk": 0.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ]
+    ],
+    "classification_report": {
+      "Thấp": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Trung bình": {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1-score": 0.6666666666666666,
+        "support": 4.0
+      },
+      "Cao": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 4.0
+      },
+      "accuracy": 0.5,
+      "macro avg": {
+        "precision": 0.16666666666666666,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.2222222222222222,
+        "support": 8.0
+      },
+      "weighted avg": {
+        "precision": 0.25,
+        "recall": 0.5,
+        "f1-score": 0.3333333333333333,
+        "support": 8.0
+      }
+    },
+    "high_pm25_mae": 5.947500000000002,
+    "high_pm25_recall": 0.0,
+    "mase": 23.790000000000006,
+    "skill_score_vs_persistence": -22.790000000000006
+  },
+  "serving_champion": "ridge",
+  "serving_champion_test": {
+    "mae": 0.31596576071541627,
+    "rmse": 0.3167288628807711,
+    "bias": -0.31596576071541627,
+    "p90_absolute_error": 0.3440922464390038,
+    "macro_f1": 0.6666666666666666,
+    "macro_f1_all_configured_classes": 0.6666666666666666,
+    "macro_f1_observed_classes": 1.0,
+    "support_by_class": {
+      "Thấp": 0,
+      "Trung bình": 4,
+      "Cao": 4
+    },
+    "observed_classes": [
+      "Trung bình",
+      "Cao"
+    ],
+    "qwk": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "classification_report": {
+      "Thấp": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Trung bình": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "Cao": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.6666666666666666,
+        "support": 8.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      }
+    },
+    "high_pm25_mae": 0.3134952073743964,
+    "high_pm25_recall": 1.0,
+    "mase": 1.263863042861665,
+    "skill_score_vs_persistence": -0.26386304286166506,
+    "conformal_interval": {
+      "picp": 0.75,
+      "mpiw": 0.6553983591349724,
+      "min_width": 0.6553983591349635,
+      "max_width": 0.6553983591349777,
+      "coverage_error_vs_90pct": -0.15000000000000002
+    }
+  },
+  "champion_test": {
+    "mae": 0.31596576071541627,
+    "rmse": 0.3167288628807711,
+    "bias": -0.31596576071541627,
+    "p90_absolute_error": 0.3440922464390038,
+    "macro_f1": 0.6666666666666666,
+    "macro_f1_all_configured_classes": 0.6666666666666666,
+    "macro_f1_observed_classes": 1.0,
+    "support_by_class": {
+      "Thấp": 0,
+      "Trung bình": 4,
+      "Cao": 4
+    },
+    "observed_classes": [
+      "Trung bình",
+      "Cao"
+    ],
+    "qwk": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "classification_report": {
+      "Thấp": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0.0
+      },
+      "Trung bình": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "Cao": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.6666666666666666,
+        "support": 8.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      }
+    },
+    "high_pm25_mae": 0.3134952073743964,
+    "high_pm25_recall": 1.0,
+    "mase": 1.263863042861665,
+    "skill_score_vs_persistence": -0.26386304286166506,
+    "conformal_interval": {
+      "picp": 0.75,
+      "mpiw": 0.6553983591349724,
+      "min_width": 0.6553983591349635,
+      "max_width": 0.6553983591349777,
+      "coverage_error_vs_90pct": -0.15000000000000002
+    }
+  },
+  "conformal_test_evaluation": {
+    "picp": 0.75,
+    "mpiw": 0.6553983591349724,
+    "min_width": 0.6553983591349635,
+    "max_width": 0.6553983591349777,
+    "coverage_error_vs_90pct": -0.15000000000000002
+  },
+  "quality_gate": {
+    "passes_baseline": true,
+    "mae_improvement_vs_persistence": 0.6791159383952247,
+    "high_pm25_recall": 1.0,
+    "rolling_mae_std": 0.10987510794331562,
+    "picp_gap": 0.09999999999999998,
+    "checks": {
+      "mae_improvement_ge_5pct": true,
+      "high_recall_ge_75pct": true,
+      "high_recall_is_diagnostic_only": true,
+      "rolling_mae_std_le_1": true,
+      "picp_gap_acceptable": true
+    },
+    "status": "đạt"
+  },
+  "metrics_by_station": {
+    "Trạm A": {
+      "mae": 0.31843631405643613,
+      "rmse": 0.3191839487087551,
+      "bias": -0.31843631405643613,
+      "p90_absolute_error": 0.3404804797021477,
+      "macro_f1": 0.3333333333333333,
+      "macro_f1_all_configured_classes": 0.3333333333333333,
+      "macro_f1_observed_classes": 1.0,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 4,
+        "Cao": 0
+      },
+      "observed_classes": [
+        "Trung bình"
+      ],
+      "qwk": null,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        },
+        "Cao": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 0.3333333333333333,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.3333333333333333,
+          "support": 4.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        }
+      },
+      "high_pm25_mae": null,
+      "high_pm25_recall": 0.0,
+      "count": 4,
+      "conformal_picp": 0.75,
+      "conformal_mpiw": 0.6553983591349706
+    },
+    "Trạm B": {
+      "mae": 0.3134952073743964,
+      "rmse": 0.3142545975004653,
+      "bias": -0.3134952073743964,
+      "p90_absolute_error": 0.3355393730201044,
+      "macro_f1": 0.3333333333333333,
+      "macro_f1_all_configured_classes": 0.3333333333333333,
+      "macro_f1_observed_classes": 1.0,
+      "support_by_class": {
+        "Thấp": 0,
+        "Trung bình": 0,
+        "Cao": 4
+      },
+      "observed_classes": [
+        "Cao"
+      ],
+      "qwk": null,
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          4
+        ]
+      ],
+      "classification_report": {
+        "Thấp": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Trung bình": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 0.0
+        },
+        "Cao": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 0.3333333333333333,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.3333333333333333,
+          "support": 4.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 4.0
+        }
+      },
+      "high_pm25_mae": 0.3134952073743964,
+      "high_pm25_recall": 1.0,
+      "count": 4,
+      "conformal_picp": 0.75,
+      "conformal_mpiw": 0.6553983591349741
+    }
+  },
+  "sliced_error_analysis": {
+    "by_pollution_level": {
+      "Trung bình": {
+        "count": 4,
+        "mae": 0.31843631405643613,
+        "max_error": 0.3475510211164341
+      },
+      "Cao": {
+        "count": 4,
+        "mae": 0.3134952073743964,
+        "max_error": 0.3426099144343908
+      }
+    },
+    "by_hour_of_day": {
+      "0": {
+        "count": 2,
+        "mae": 0.3215119963944577
+      },
+      "1": {
+        "count": 2,
+        "mae": 0.34508046777541246
+      },
+      "2": {
+        "count": 2,
+        "mae": 0.3132590822991457
+      },
+      "3": {
+        "count": 2,
+        "mae": 0.2840114963926492
+      }
+    }
+  }
+}

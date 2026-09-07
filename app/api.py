@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from src.data.loader import load_air_quality
 from src.predict import Predictor
 
 DEFAULT_ARTIFACT_ROOT = Path("artifacts")
@@ -27,7 +28,9 @@ class Observation(BaseModel):
     """Một quan trắc đầu vào của trạm với ràng buộc miền giá trị hợp lệ."""
 
     timestamp: datetime
-    station: str = Field(min_length=1, max_length=100)
+    # station giữ lại để tương thích payload cũ; station_id là tên canonical.
+    station: str | None = Field(default=None, min_length=1, max_length=100)
+    station_id: str | None = Field(default=None, min_length=1, max_length=100)
     PM25: float = Field(alias="PM2.5", ge=0, le=1000)
     TSP: float | None = Field(default=None, ge=0)
     NO2: float | None = Field(default=None, ge=0)
@@ -39,6 +42,10 @@ class Observation(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    def model_post_init(self, __context: object) -> None:
+        if not self.station and not self.station_id:
+            raise ValueError("Phải cung cấp station_id (hoặc station ở API legacy).")
+
 
 class PredictionRequest(BaseModel):
     """Chuỗi quan trắc dùng để tạo lag và dự báo (tối thiểu 25, tối đa 168 giờ)."""
@@ -49,7 +56,7 @@ class PredictionRequest(BaseModel):
 class Interval(BaseModel):
     """Khoảng dự báo Conformal Interval."""
 
-    method: str = "split_conformal"
+    method: str = "split_conformal_prediction_interval"
     coverage_target: float = Field(default=0.9, ge=0.0, le=1.0)
     coverage: float = Field(default=0.9, ge=0.0, le=1.0)
     lower: float
@@ -61,6 +68,7 @@ class PredictionResponse(BaseModel):
     """Cấu trúc phản hồi chuẩn hóa của endpoint dự báo."""
 
     station: str
+    station_id: str | None = None
     forecast_origin: str
     forecast_for: str
     current_pm25: float
@@ -143,15 +151,25 @@ def health():
 
 
 @app.post("/predict", response_model=PredictionResponse)
+@app.post("/v1/predict/raw", response_model=PredictionResponse)
 def predict(request: PredictionRequest):
-    """Kiểm tra đầu vào và trả dự báo PM2.5 giờ kế tiếp."""
+    """Endpoint debug nhận raw history; API chính nằm ở /v1/stations/{station_id}/forecast."""
     try:
         records = [item.model_dump(by_alias=True) for item in request.observations]
+        # Chuẩn hóa alias theo config của artifact, tránh station/station_id
+        # bị lệch giữa payload và model bundle.
+        predictor = get_predictor()
+        predictor_config = getattr(predictor, "config", {}) or {}
+        station_column = predictor_config.get("data", {}).get("station_column", "station")
+        for rec in records:
+            station_value = rec.get("station_id") or rec.get("station")
+            rec[station_column] = station_value
+            rec["station_id"] = station_value
         # Chuyển timestamp datetime thành chuỗi ISO để pandas parser nhất quán
         for rec in records:
             if isinstance(rec.get("timestamp"), datetime):
                 rec["timestamp"] = rec["timestamp"].isoformat()
-        return get_predictor().predict(pd.DataFrame(records))
+        return predictor.predict(pd.DataFrame(records))
     except ValueError as error:
         return JSONResponse(
             status_code=400,
@@ -161,6 +179,35 @@ def predict(request: PredictionRequest):
         return JSONResponse(
             status_code=503,
             content={"code": "MODEL_UNAVAILABLE", "message": "Mô hình hoặc artifact chưa sẵn sàng."},
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"code": "INTERNAL_ERROR", "message": "Lỗi nội bộ hệ thống."},
+        )
+
+
+@app.get("/v1/stations/{station_id}/forecast", response_model=PredictionResponse)
+def forecast_station(station_id: str):
+    """API chính: backend tự lấy history gần nhất thay vì bắt client upload 25 dòng."""
+    try:
+        predictor = get_predictor()
+        config = predictor.config
+        frame = load_air_quality(config)
+        station_column = config["data"]["station_column"]
+        history = frame[frame[station_column].astype(str) == station_id].tail(168)
+        if history.empty:
+            raise ValueError(f"Không tìm thấy history cho station_id={station_id!r}.")
+        return predictor.predict(history)
+    except ValueError as error:
+        return JSONResponse(
+            status_code=400,
+            content={"code": "INVALID_INPUT", "message": str(error)},
+        )
+    except FileNotFoundError as error:
+        return JSONResponse(
+            status_code=503,
+            content={"code": "DATA_UNAVAILABLE", "message": str(error)},
         )
     except Exception:
         return JSONResponse(

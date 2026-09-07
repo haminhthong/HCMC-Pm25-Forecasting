@@ -12,6 +12,9 @@ from typing import Any
 
 import pandas as pd
 
+DEFAULT_SOURCE_TIMEZONE = "Asia/Ho_Chi_Minh"
+CANONICAL_STORAGE_TIMEZONE = "UTC"
+
 CANONICAL_COLUMNS = [
     "timestamp",
     "station_id",
@@ -43,6 +46,43 @@ PHYSICAL_RANGES: dict[str, tuple[float, float]] = {
     "wind_direction": (0.0, 360.0),
     "rainfall": (0.0, 500.0),
 }
+
+
+def normalize_timestamp_series(
+    values: pd.Series,
+    *,
+    source_timezone: str = DEFAULT_SOURCE_TIMEZONE,
+) -> pd.Series:
+    """Chuẩn hóa timestamp về UTC có timezone.
+
+    Timestamp không có timezone được hiểu là giờ địa phương TP.HCM. Timestamp
+    đã có timezone được đổi sang UTC. Quy ước này phải được dùng ở mọi điểm
+    vào hệ thống để train, backtest và serving dùng cùng một trục thời gian.
+    """
+    parsed = pd.to_datetime(values, errors="coerce")
+    if getattr(parsed.dtype, "tz", None) is None:
+        try:
+            return parsed.dt.tz_localize(source_timezone).dt.tz_convert(
+                CANONICAL_STORAGE_TIMEZONE
+            )
+        except (AttributeError, TypeError):
+            # Mixed naive/aware input tạo object dtype; chuẩn hóa từng phần tử
+            # để không lặng lẽ biến một phần timestamp thành UTC giả.
+            normalized = []
+            for value in parsed:
+                timestamp = pd.Timestamp(value) if pd.notna(value) else pd.NaT
+                if pd.isna(timestamp):
+                    normalized.append(pd.NaT)
+                elif timestamp.tzinfo is None:
+                    normalized.append(
+                        timestamp.tz_localize(source_timezone).tz_convert(
+                            CANONICAL_STORAGE_TIMEZONE
+                        )
+                    )
+                else:
+                    normalized.append(timestamp.tz_convert(CANONICAL_STORAGE_TIMEZONE))
+            return pd.Series(normalized, index=values.index)
+    return parsed.dt.tz_convert(CANONICAL_STORAGE_TIMEZONE)
 
 
 @dataclass

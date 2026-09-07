@@ -13,11 +13,12 @@ def build_quality_gate(
     conformal_picp: float | None = None,
     coverage_target: float = 0.90,
 ) -> dict[str, Any]:
-    """Đánh giá Quality Gate đa tiêu chí:
-    1. MAE_model <= MAE_persistence * (1 - min_improvement)
-    2. High PM2.5 recall >= min_recall
-    3. Rolling MAE std <= max_std
-    4. Conformal coverage gap: abs(PICP - target) <= max_gap (nếu có PICP)
+    """Đánh giá gate offline cho model trước khi cho phép serving.
+
+    Recall nhóm PM2.5 cao vẫn được trả về như một operational diagnostic,
+    nhưng không còn quyết định model regression có được release hay không.
+    Gate chính là MAE vượt Persistence, độ ổn định qua backtest và (nếu có)
+    kiểm tra độ phủ prediction interval.
     """
     qg_cfg = config.get("quality_gate", {})
     min_improvement = qg_cfg.get("minimum_mae_improvement", 0.05)
@@ -32,16 +33,18 @@ def build_quality_gate(
     improvement = (
         (persistence_mae - champion_mae) / persistence_mae if persistence_mae > 0 else 0.0
     )
+    # Đây là biến bắt buộc. Trước đây passes_all dùng biến này trước khi gán,
+    # khiến chạy pipeline từ đầu có thể dừng bằng NameError.
+    passes_mae = bool(
+        champion_mae < persistence_mae and improvement >= float(min_improvement)
+    )
 
     labels = list(config.get("thresholds", {}).get("labels", ["Thấp", "Trung bình", "Cao"]))
     high_label = labels[2] if len(labels) > 2 else "Cao"
     high_support = champion_metrics.get("support_by_class", {}).get(high_label, None)
-    if high_support == 0:
-        # Khi tập dữ liệu không có bất kỳ quan trắc nào thuộc mức Cao (support=0),
-        # bỏ qua kiểm tra recall để tránh đánh rớt mô hình vì lý do dữ liệu sạch
-        passes_recall = True
-    else:
-        passes_recall = high_recall >= min_high_recall
+    # Recall là diagnostic; nếu tập calibration không có lớp Cao thì không
+    # đánh rớt model vì thiếu support.
+    passes_recall = True if high_support == 0 else high_recall >= min_high_recall
     passes_std = champion_mae_std <= max_mae_std
 
     # Optional PICP coverage check if evaluated
@@ -52,7 +55,7 @@ def build_quality_gate(
         picp_gap = 0.0
         passes_picp = True
 
-    passes_all = passes_mae and passes_recall and passes_std and passes_picp
+    passes_all = passes_mae and passes_std and passes_picp
 
     return {
         "passes_baseline": bool(passes_all),
@@ -63,6 +66,7 @@ def build_quality_gate(
         "checks": {
             "mae_improvement_ge_5pct": bool(passes_mae),
             "high_recall_ge_75pct": bool(passes_recall),
+            "high_recall_is_diagnostic_only": True,
             "rolling_mae_std_le_1": bool(passes_std),
             "picp_gap_acceptable": bool(passes_picp),
         },

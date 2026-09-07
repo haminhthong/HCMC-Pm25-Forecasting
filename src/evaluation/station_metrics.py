@@ -15,7 +15,7 @@ def metrics_by_station(
     predictions: np.ndarray,
     station_column: str,
     thresholds: dict[str, Any],
-    conformal_residual_q90: float | None = None,
+    conformal_residual_q90: float | dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Tính toàn bộ metric cho từng trạm độc lập."""
     result: dict[str, Any] = {}
@@ -29,8 +29,15 @@ def metrics_by_station(
         metrics["count"] = int(len(group))
 
         if conformal_residual_q90 is not None:
-            lower = np.maximum(0.0, y_pred - conformal_residual_q90)
-            upper = y_pred + conformal_residual_q90
+            residual_q = (
+                conformal_residual_q90.get(
+                    str(station_name), conformal_residual_q90.get("__global__", 0.0)
+                )
+                if isinstance(conformal_residual_q90, dict)
+                else conformal_residual_q90
+            )
+            lower = np.maximum(0.0, y_pred - residual_q)
+            upper = y_pred + residual_q
             covered = (y_true >= lower) & (y_true <= upper)
             metrics["conformal_picp"] = float(np.mean(covered))
             metrics["conformal_mpiw"] = float(np.mean(upper - lower))

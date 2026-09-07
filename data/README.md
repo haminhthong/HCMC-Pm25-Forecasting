@@ -5,7 +5,7 @@
 > [!WARNING]
 > **SMOKE TEST ONLY — NOT A PRODUCTION BENCHMARK**
 >
-> Tập dữ liệu commit trong repository (`data/sample/air_quality_sample.csv`) chỉ gồm 74 dòng dữ liệu tổng hợp (synthetic sample) với 8 quan sát trong tập test.
+> Tập dữ liệu commit trong repository (`data/sample/air_quality_sample.csv`) chỉ là smoke dataset tổng hợp. Số dòng và metric phải đọc từ artifact/manifest, không hard-code trong tài liệu.
 > **Tuyệt đối không sử dụng kết quả đánh giá trên file này để tuyên bố chất lượng dự báo thực tế** (như QWK, Recall, hay MASE). Toàn bộ artifact sinh ra từ tập sample được gắn cờ rõ ràng:
 > `production_readiness: "smoke_test_only"`.
 

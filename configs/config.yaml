@@ -3,11 +3,13 @@ project:
 data:
   path: data/sample/air_quality_sample.csv
   timestamp_column: timestamp
-  station_column: station
+  station_column: station_id
   target_column: PM2.5
-  required_columns: [timestamp, station, PM2.5]
+  required_columns: [timestamp, station_id, PM2.5]
   optional_columns: [TSP, NO2, SO2, CO, O3, temperature, humidity]
   zero_as_missing: false
+  source_timezone: Asia/Ho_Chi_Minh
+  calendar_timezone: Asia/Ho_Chi_Minh
 features:
   lags: [1, 2, 3, 6, 12, 24]
   rolling_windows: [3, 6, 24]
@@ -21,14 +23,12 @@ split:
   backtest_folds: 3
   minimum_train_periods: 12
 model:
-  name: random_forest
+  name: hist_gradient_boosting
   params:
-    n_estimators: 200
-    max_depth: 12
-    min_samples_leaf: 2
-    n_jobs: -1
+    max_iter: 200
+    learning_rate: 0.05
 model_comparison:
-  candidates: [ridge, random_forest, extra_trees, hist_gradient_boosting]
+  candidates: [ridge, hist_gradient_boosting]
 # P0.5 — every candidate declared under `model_comparison.candidates` MUST
 # have an entry in this block. The single-model `model.params` block above
 # remains as a backward-compatible fallback when a candidate name matches
@@ -36,15 +36,6 @@ model_comparison:
 models:
   ridge:
     alpha: 1.0
-  random_forest:
-    n_estimators: 200
-    max_depth: 12
-    min_samples_leaf: 2
-    n_jobs: -1
-  extra_trees:
-    n_estimators: 200
-    min_samples_leaf: 2
-    n_jobs: -1
   hist_gradient_boosting:
     max_iter: 200
     learning_rate: 0.05
@@ -58,6 +49,7 @@ quality_gate:
   minimum_high_pm25_recall: 0.75
   maximum_rolling_mae_std: 1.0
   maximum_picp_gap: 0.15
+  minimum_calibration_samples_per_station: 20
 feature_availability:
   PM2.5: 0
   TSP: 0
@@ -78,4 +70,3 @@ mlflow:
   enabled: false
   tracking_uri: mlruns
   experiment_name: hcmc-pm25-next-hour
-

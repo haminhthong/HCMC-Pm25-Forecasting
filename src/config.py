@@ -1,10 +1,4 @@
-"""Centralized configuration loading and validation for PM2.5 forecasting.
-
-P0 updates:
-- calibration_fraction > 0 required for conformal prediction.
-- All candidate models in model_comparison.candidates must have hyperparameters defined in models: section.
-- Added support for feature_availability, quality_gate picp tolerance, and artifacts versioning.
-"""
+"""Đọc và kiểm tra cấu hình dùng chung cho toàn bộ pipeline."""
 
 from __future__ import annotations
 
@@ -46,14 +40,38 @@ def validate_config(config: dict[str, Any]) -> None:
     calibration_fraction = split_cfg.get("calibration_fraction", 0.1)
     coverage = split_cfg.get("coverage", 0.9)
 
-    if not isinstance(test_fraction, int | float) or not 0 < test_fraction < 1:
+    has_calendar_boundaries = all(
+        split_cfg.get(key) for key in ("train_end", "calibration_end", "test_end")
+    )
+    if has_calendar_boundaries:
+        boundaries = [
+            split_cfg["train_end"],
+            split_cfg["calibration_end"],
+            split_cfg["test_end"],
+        ]
+        parsed_boundaries = [yaml.safe_load(f"value: {value}")["value"] for value in boundaries]
+        if parsed_boundaries != sorted(parsed_boundaries):
+            raise ValueError(
+                "split.train_end, calibration_end và test_end phải tăng dần theo thời gian."
+            )
+
+    if not has_calendar_boundaries and (
+        not isinstance(test_fraction, int | float) or not 0 < test_fraction < 1
+    ):
         raise ValueError("split.test_fraction phải nằm trong khoảng (0, 1).")
-    if not isinstance(calibration_fraction, int | float) or not 0 < calibration_fraction < 1:
+    if not has_calendar_boundaries and (
+        not isinstance(calibration_fraction, int | float) or not 0 < calibration_fraction < 1
+    ):
         raise ValueError(
             "split.calibration_fraction phải nằm trong khoảng (0, 1) để đảm bảo "
             "tập hiệu chuẩn độc lập cho Conformal Prediction (P0.1)."
         )
-    if test_fraction + calibration_fraction >= 1:
+    if (
+        not has_calendar_boundaries
+        and isinstance(test_fraction, int | float)
+        and isinstance(calibration_fraction, int | float)
+        and test_fraction + calibration_fraction >= 1
+    ):
         raise ValueError("Tổng test_fraction và calibration_fraction phải nhỏ hơn 1.")
     if not isinstance(coverage, int | float) or not 0 < coverage < 1:
         raise ValueError("split.coverage phải nằm trong khoảng (0, 1).")
@@ -89,6 +107,17 @@ def validate_config(config: dict[str, Any]) -> None:
         raise ValueError("features.lags phải chứa các số nguyên dương.")
     if not windows or any(not isinstance(val, int) or val < 1 for val in windows):
         raise ValueError("features.rolling_windows phải chứa các số nguyên dương.")
+
+    availability = config.get("feature_availability", {})
+    invalid_availability = [
+        name for name, delay in availability.items()
+        if not isinstance(delay, int) or delay < 0
+    ]
+    if invalid_availability:
+        raise ValueError(
+            "feature_availability phải là số giờ nguyên không âm: "
+            + ", ".join(sorted(invalid_availability))
+        )
 
     # Threshold checks
     low_max = config["thresholds"].get("low_max", config["thresholds"].get("good_max"))

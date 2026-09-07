@@ -8,6 +8,7 @@ from src.data.regularization import (
     audit_hourly_gaps,
     regularize_hourly_series,
 )
+from src.data.runtime_gate import audit_runtime_history
 from src.data.schema import (
     CANONICAL_COLUMNS,
     PHYSICAL_RANGES,
@@ -23,6 +24,7 @@ __all__ = [
     "AirQualityDataset",
     "StationMetadata",
     "audit_air_quality",
+    "audit_runtime_history",
     "audit_hourly_gaps",
     "load_air_quality",
     "load_config",

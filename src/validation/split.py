@@ -10,11 +10,54 @@ import pandas as pd
 
 def split_by_time(
     frame: pd.DataFrame,
-    test_fraction: float,
+    test_fraction: float | None = None,
     calibration_fraction: float = 0.0,
     timestamp_column: str = "timestamp",
+    *,
+    train_end: str | pd.Timestamp | None = None,
+    calibration_end: str | pd.Timestamp | None = None,
+    test_end: str | pd.Timestamp | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Chia theo mốc thời gian sao cho target_timestamp của train nhỏ hơn mốc cal_start và test_start."""
+    """Chia dữ liệu theo lịch cố định hoặc fraction fallback.
+
+    Khi có ``train_end``, ``calibration_end`` và ``test_end``, các mốc này được
+    ưu tiên để ranh giới không dịch chuyển khi dữ liệu mới được append.
+    """
+    explicit_boundaries = [train_end, calibration_end, test_end]
+    if any(value is not None for value in explicit_boundaries):
+        if not all(value is not None for value in explicit_boundaries):
+            raise ValueError("Phải cung cấp đủ train_end, calibration_end và test_end.")
+
+        boundaries = [pd.Timestamp(value) for value in explicit_boundaries]
+        frame_tz = getattr(frame[timestamp_column].dtype, "tz", None)
+        normalized_boundaries = []
+        for boundary in boundaries:
+            if boundary.tzinfo is None and frame_tz is not None:
+                boundary = boundary.tz_localize(frame_tz)
+            elif boundary.tzinfo is not None and frame_tz is not None:
+                boundary = boundary.tz_convert(frame_tz)
+            normalized_boundaries.append(boundary)
+        train_end_ts, calibration_end_ts, test_end_ts = normalized_boundaries
+        if not train_end_ts < calibration_end_ts < test_end_ts:
+            raise ValueError("Các mốc split calendar phải tăng dần theo thời gian.")
+
+        target_column = "target_timestamp" if "target_timestamp" in frame.columns else timestamp_column
+        train_frame = frame[frame[target_column] < train_end_ts].copy()
+        cal_mask = (frame[timestamp_column] >= train_end_ts) & (
+            frame[timestamp_column] < calibration_end_ts
+        )
+        cal_mask &= frame[target_column] < calibration_end_ts
+        cal_frame = frame[cal_mask].copy()
+        test_mask = (frame[timestamp_column] >= calibration_end_ts) & (
+            frame[timestamp_column] < test_end_ts
+        )
+        test_mask &= frame[target_column] < test_end_ts
+        test_frame = frame[test_mask].copy()
+        return train_frame, cal_frame, test_frame
+
+    if test_fraction is None:
+        raise ValueError("Cần test_fraction hoặc bộ mốc split calendar.")
+
     periods = np.sort(frame[timestamp_column].unique())
     total_periods = len(periods)
     test_period_count = max(1, int(np.ceil(total_periods * test_fraction)))

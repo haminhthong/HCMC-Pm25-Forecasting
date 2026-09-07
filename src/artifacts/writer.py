@@ -72,22 +72,31 @@ def save_artifacts(
             encoding="utf-8",
         )
 
-    # Pointer to active version in production.json
-    production_pointer = artifact_root / "production.json"
+    # Chỉ lưu đường dẫn tương đối để artifact không phụ thuộc máy cá nhân.
+    relative_version_dir = Path(artifact_root.name) / "models" / model_version
+    relative_model_path = relative_version_dir / config["artifacts"]["model_file"]
+
+    # Pointer to active version in active_release.json/production.json
+    production_pointer = artifact_root / "active_release.json"
     production_payload = {
         "active_version": model_version if versioned else ".",
         "updated_at": datetime.now(UTC).isoformat(),
         "production_readiness": metadata.get("production_readiness", "unknown"),
         "calibration_gate": metadata.get("calibration_gate", "unknown"),
-        "artifact_path": model_path.as_posix(),
-        "version_dir": version_dir.as_posix(),
+        "artifact_relative_path": relative_model_path.as_posix(),
+        "version_dir": relative_version_dir.as_posix(),
     }
     production_pointer.write_text(
         json.dumps(production_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    # Ghi pointer cũ để các deployment chưa nâng cấp vẫn đọc được release.
+    (artifact_root / "production.json").write_text(
+        json.dumps(production_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
-    metadata["artifact_version_dir"] = version_dir.resolve().as_posix()
+    metadata["artifact_relative_path"] = relative_version_dir.as_posix()
     metadata_path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
         encoding="utf-8",

@@ -24,8 +24,17 @@ def resolve_artifact_dir(
     if (dir_path / "model.joblib").is_file():
         return dir_path.resolve()
 
-    # 2. Pointer from production_pointer or production.json
-    pointer_path = Path(production_pointer) if production_pointer else (dir_path / "production.json")
+    # 2. Pointer release mới; production.json vẫn được đọc để tương thích artifact cũ.
+    pointer_path = Path(production_pointer) if production_pointer else None
+    if pointer_path is None:
+        pointer_path = next(
+            (
+                candidate
+                for candidate in (dir_path / "active_release.json", dir_path / "production.json")
+                if candidate.is_file()
+            ),
+            dir_path / "active_release.json",
+        )
     if pointer_path.is_file():
         payload = json.loads(pointer_path.read_text(encoding="utf-8"))
         active = payload.get("active_version")
