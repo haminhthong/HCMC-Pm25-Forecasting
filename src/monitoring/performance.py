@@ -16,6 +16,14 @@ def rolling_forecast_metrics(events: pd.DataFrame, window: int = 168) -> dict[st
     if work.empty:
         return {"rows": 0, "mae": None, "bias": None, "skill_vs_persistence": None, "picp": None}
     error = work["prediction"].astype(float) - work["actual_pm25"].astype(float)
+    if "persistence_prediction" not in work.columns:
+        return {
+            "rows": int(len(work)),
+            "mae": float(np.abs(error).mean()),
+            "bias": float(error.mean()),
+            "skill_vs_persistence": None,
+            "picp": None,
+        }
     persistence_error = work["persistence_prediction"].astype(float) - work["actual_pm25"].astype(float)
     persistence_mae = float(np.abs(persistence_error).mean())
     lower = work["lower"].astype(float)

@@ -3,7 +3,8 @@
 P0 changes (2026-09-06):
 * P0.4 — the predictor is built via ``Predictor.from_artifact`` which reads
   the model bundle from a versioned directory (default ``artifacts/``). The
-  active version is resolved through ``production.json`` (or
+  active version is resolved through ``active_release.json`` (with
+  ``production.json`` kept as a compatibility fallback, or
   ``PM25_ARTIFACT_DIR`` env var). The legacy direct-load path is preserved
   via ``Predictor(load_config(...))`` for local development only.
 * P0.6 — readiness fields are surfaced through ``/health`` and ``/predict``.
@@ -82,6 +83,7 @@ class PredictionResponse(BaseModel):
     updated_at: str
     production_readiness: str = "unknown"
     calibration_gate: str = "unknown"
+    data_quality: dict[str, object] = Field(default_factory=dict)
 
 
 class ErrorResponse(BaseModel):
@@ -99,7 +101,7 @@ def _resolve_artifact_root() -> Path:
     2. ``./artifacts`` (default working-tree location).
 
     The active version inside that directory is selected by
-    ``Predictor.from_artifact`` via ``production.json``.
+    ``Predictor.from_artifact`` via ``active_release.json``.
     """
     env_value = __import__("os").environ.get("PM25_ARTIFACT_DIR")
     if env_value:

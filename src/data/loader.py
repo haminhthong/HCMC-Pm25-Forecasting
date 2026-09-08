@@ -56,6 +56,14 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
     if frame[timestamp].isna().any():
         raise ValueError("Cột timestamp chứa giá trị không hợp lệ hoặc không parse được.")
 
+    # Chuẩn hóa cả thời điểm phát hành để hợp đồng availability luôn so sánh
+    # giữa hai chuỗi datetime cùng timezone, tránh lỗi mixed aware/naive.
+    if "available_at" in frame.columns:
+        frame["available_at"] = normalize_timestamp_series(
+            frame["available_at"],
+            source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+        )
+
     frame = frame.dropna(subset=[station]).copy()
 
     if data_config.get("zero_as_missing", False):

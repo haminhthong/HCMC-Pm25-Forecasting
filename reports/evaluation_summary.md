@@ -5,15 +5,13 @@
 | Mô hình ứng viên | MAE CV trung bình | Độ lệch chuẩn (Std) | RMSE CV trung bình |
 |---|---:|---:|---:|
 | `ridge` | 0.381 | 0.110 | 0.397 |
-| `random_forest` | 2.209 | 0.730 | 2.306 |
-| `extra_trees` | 2.006 | 0.726 | 2.098 |
 | `hist_gradient_boosting` | 4.110 | 0.552 | 4.739 |
 
 ## 2. Đánh Giá Quality Gate & Quyết Định Serving Champion
 
 - Quality gate: **đạt**
 - Cải thiện MAE vs Persistence: **67.9%** (Yêu cầu: $\ge 5\%$)
-- Recall nhóm PM2.5 cao: **100.0%** (Yêu cầu: $\ge 75\%$)
+- Recall nhóm PM2.5 cao: **100.0%** (diagnostic, không phải điều kiện release)
 - Độ lệch chuẩn Rolling MAE: **0.110** (Yêu cầu: $\le 1.0$)
 - **Chính sách phục vụ suy luận (Serving Champion):** `ridge`
 
@@ -29,14 +27,14 @@
 ## 4. Kiểm Định Khoảng Tin Cậy Conformal (90% Target Coverage)
 
 - **Độ phủ thực tế trên tập Test (PICP):** 75.0%
-- **Độ rộng khoảng trung bình (MPIW):** 0.650 µg/m³ (±0.325 µg/m³)
-- **Độ rộng khoảng trung vị:** 0.650 µg/m³
+- **Độ rộng khoảng trung bình (MPIW):** N/A µg/m³ (±0.000 µg/m³)
+- **Độ rộng khoảng trung vị:** N/A µg/m³
 
 ## 5. Đánh Giá Phân Rã Theo Trạm Quan Trắc
 
 | Trạm quan trắc | MAE Test | RMSE Test | PICP Conformal | Độ rộng khoảng (MPIW) |
 |---|---:|---:|---:|---:|
-| `Trạm A` | 0.318 | 0.319 | 75.0% | ±0.325 µg/m³ |
-| `Trạm B` | 0.313 | 0.314 | 75.0% | ±0.325 µg/m³ |
+| `Trạm A` | 0.318 | 0.319 | 75.0% | ±0.328 µg/m³ |
+| `Trạm B` | 0.313 | 0.314 | 75.0% | ±0.328 µg/m³ |
 
 > ⚠️ **Lưu ý:** Báo cáo này áp dụng quy trình đánh giá chuẩn mực chống rò rỉ dữ liệu (Nested Temporal Evaluation). Khi áp dụng dữ liệu thực tế tại TP.HCM, cần kiểm tra nguồn và giấy phép cung cấp dữ liệu.

@@ -50,7 +50,7 @@
    - Trong tập Train: thiết lập Expanding-Window Cross-Validation Folds với `target_timestamp < validation_start`.
 4. **Model Selection**:
    - Đánh giá các baselines: **Persistence** ($\hat{y}_{t+1} = y_t$), **Seasonal Naive 24h** ($\hat{y}_{t+1} = y_{t-23}$), **Ridge Autoregression**.
-   - Đánh giá các mô hình ensemble: **Random Forest**, **ExtraTrees**, **HistGradientBoosting**.
+   - Candidate bật trong cấu hình hiện tại: **Ridge** và **HistGradientBoosting**. Factory có thể mở rộng thêm model, nhưng model chỉ trở thành candidate khi được khai báo trong model_comparison.candidates.
    - Chọn Candidate Champion theo tiêu chí $\text{Mean CV MAE}$ thấp nhất.
 5. **Calibration & Quality Gate**:
    - Huấn luyện Candidate Champion trên toàn bộ tập Train.
@@ -58,8 +58,9 @@
    - Tính quantile bậc 90% ($q_{90}$) cho Conformal Prediction Interval.
    - Thẩm định Quality Gate đa tiêu chí:
      1. $MAE_{\text{model}} \le MAE_{\text{persistence}} \times (1 - 0.05)$
-     2. $\text{Recall}_{\text{Cao}} \ge 0.75$
-     3. $\text{Std}(MAE_{\text{folds}}) \le 1.0$
+     2. $\text{Std}(MAE_{\text{folds}}) \le 1.0$
+     3. Nếu có calibration PICP, độ lệch so với coverage mục tiêu không vượt ngưỡng cấu hình
+   - Recall PM2.5 cao được lưu như diagnostic nghiệp vụ, không tự mình quyết định release regression model.
    - Nếu Quality Gate **PASS**: `serving_champion` = Candidate ML.
    - Nếu Quality Gate **FAIL**: `serving_champion` = `persistence` (fallback an toàn).
 6. **Freeze Policy & Final Test**:

@@ -114,6 +114,10 @@ def save_artifacts(
                 json.dumps(feature_schema, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+            (artifact_root / config["artifacts"]["evaluation_file"]).write_text(
+                json.dumps(evaluation, ensure_ascii=False, indent=2, allow_nan=False),
+                encoding="utf-8",
+            )
             with (artifact_root / config_snapshot_file).open("w", encoding="utf-8") as file:
                 yaml.safe_dump(config, file, allow_unicode=True)
         except Exception:

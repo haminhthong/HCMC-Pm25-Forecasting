@@ -12,6 +12,7 @@ Delegates core operations to the modular architecture under src/:
 from __future__ import annotations
 
 import argparse
+import sys
 from typing import Any
 
 from src.artifacts.writer import save_artifacts
@@ -49,6 +50,9 @@ def main() -> None:
     result = train(config_path=args.config, persist_artifacts=not args.no_artifacts)
     champion = result["serving_champion"]
     gate_status = result["metadata"]["calibration_gate"]
+    # Windows có thể dùng code page cp1252; CLI của dự án có thông báo tiếng Việt.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print(f"Hoàn thành huấn luyện. Serving champion: {champion} (Calibration gate: {gate_status})")
 
 

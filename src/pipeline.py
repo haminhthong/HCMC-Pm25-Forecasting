@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -373,6 +374,9 @@ def run_train_pipeline(
 
 def main() -> None:
     """CLI entry point for master pipeline."""
+    # Đảm bảo CLI in được tên trạm và thông báo tiếng Việt trên Windows.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Leakage-Safe Next-Hour PM2.5 Master Pipeline")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

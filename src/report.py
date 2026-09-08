@@ -77,12 +77,19 @@ def build_markdown(evaluation: dict) -> str:
         "|---|---:|---:|---:|---:|",
     ]
     for station_name, st_metrics in evaluation.get("metrics_by_station", {}).items():
-        conf_st = st_metrics.get("conformal_interval", {})
+        # metrics_by_station lưu field phẳng; vẫn đọc nested schema cũ để
+        # báo cáo artifact trước đây không bị hỏng.
+        picp = st_metrics.get("conformal_picp")
+        interval_width = st_metrics.get("conformal_mpiw")
+        if picp is None or interval_width is None:
+            conf_st = st_metrics.get("conformal_interval", {})
+            picp = conf_st.get("picp")
+            interval_width = conf_st.get("mean_interval_width")
         station_rows.append(
             f"| `{station_name}` | {format_number(st_metrics.get('mae'))} | "
             f"{format_number(st_metrics.get('rmse'))} | "
-            f"{format_percent(conf_st.get('picp'))} | "
-            f"±{format_number(conf_st.get('mean_interval_width', 0) / 2)} µg/m³ |"
+            f"{format_percent(picp)} | "
+            f"±{format_number((interval_width or 0) / 2)} µg/m³ |"
         )
 
     return "\n".join(
@@ -97,7 +104,7 @@ def build_markdown(evaluation: dict) -> str:
             "",
             f"- Quality gate: **{gate.get('status', 'N/A')}**",
             f"- Cải thiện MAE vs Persistence: **{format_percent(gate.get('mae_improvement_vs_persistence'))}** (Yêu cầu: $\\ge 5\\%$)",
-            f"- Recall nhóm PM2.5 cao: **{format_percent(gate.get('high_pm25_recall'))}** (Yêu cầu: $\\ge 75\\%$)",
+            f"- Recall nhóm PM2.5 cao: **{format_percent(gate.get('high_pm25_recall'))}** (diagnostic, không phải điều kiện release)",
             f"- Độ lệch chuẩn Rolling MAE: **{format_number(gate.get('rolling_mae_std'))}** (Yêu cầu: $\\le 1.0$)",
             f"- **Chính sách phục vụ suy luận (Serving Champion):** `{evaluation.get('serving_champion', 'N/A')}`",
 
@@ -132,7 +139,19 @@ def main() -> None:
     parser.add_argument("--output", default="reports/evaluation_summary.md")
     args = parser.parse_args()
 
-    evaluation = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    input_path = Path(args.input)
+    if args.input == "artifacts/evaluation.json":
+        pointer_path = Path("artifacts/active_release.json")
+        if pointer_path.is_file():
+            pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+            active_version = pointer.get("active_version")
+            if active_version:
+                active_input = pointer_path.parent / "models" / active_version / "evaluation.json"
+                if active_input.is_file():
+                    input_path = active_input
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Không tìm thấy evaluation artifact tại {input_path}")
+    evaluation = json.loads(input_path.read_text(encoding="utf-8"))
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(build_markdown(evaluation), encoding="utf-8")
@@ -141,4 +160,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

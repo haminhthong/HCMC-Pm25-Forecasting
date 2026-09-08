@@ -213,7 +213,8 @@ class Predictor:
         low_max, medium_max, labels = get_threshold_params(self.config["thresholds"])
         level = classify_pm25([predicted_pm25], low_max, medium_max, labels)[0]
 
-        forecast_origin_ts = pd.to_datetime(latest_row[timestamp_col].values[0])
+        # Dùng iloc thay vì values để giữ timezone UTC của Timestamp canonical.
+        forecast_origin_ts = pd.to_datetime(latest_row[timestamp_col].iloc[0])
         forecast_for_ts = forecast_origin_ts + pd.to_timedelta(self.forecast_context.horizon_hours, unit="h")
 
         result = {

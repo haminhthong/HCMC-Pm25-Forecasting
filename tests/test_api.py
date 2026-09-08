@@ -43,6 +43,7 @@ def test_api_prediction_response_schema(monkeypatch):
         },
         "model_version": "2026-09-01-001",
         "updated_at": "2024-01-01T10:00:00Z",
+        "data_quality": {"status": "GOOD", "fallback_required": False},
     }
 
     class FakePredictor:
@@ -62,6 +63,7 @@ def test_api_prediction_response_schema(monkeypatch):
     assert res["forecast_strategy"] == "ml_model"
     assert res["interval"]["coverage"] == 0.9
     assert res["interval"]["method"] == "split_conformal"
+    assert res["data_quality"]["status"] == "GOOD"
 
 
 def test_predict_returns_503_when_file_not_found(monkeypatch):
@@ -75,4 +77,3 @@ def test_predict_returns_503_when_file_not_found(monkeypatch):
     response = client.post("/predict", json={"observations": payload})
     assert response.status_code == 503
     assert response.json()["code"] == "MODEL_UNAVAILABLE"
-

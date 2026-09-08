@@ -1,5 +1,6 @@
 import pandas as pd
 
+from src.data.loader import load_air_quality
 from src.data.runtime_gate import audit_runtime_history
 from src.data.schema import normalize_timestamp_series
 from src.features.exogenous import lookup_feature_at_offset
@@ -63,3 +64,31 @@ def test_runtime_gate_marks_large_gap_for_persistence_fallback():
 def test_naive_timestamp_is_stored_as_utc():
     values = normalize_timestamp_series(pd.Series(["2024-01-01 07:00"]))
     assert str(values.iloc[0]) == "2024-01-01 00:00:00+00:00"
+
+
+def test_csv_loader_normalizes_available_at_to_utc(tmp_path):
+    csv_path = tmp_path / "observations.csv"
+    pd.DataFrame(
+        {
+            "timestamp": ["2024-01-01 07:00"],
+            "station_id": ["A"],
+            "PM2.5": [10.0],
+            "available_at": ["2024-01-01 07:30"],
+        }
+    ).to_csv(csv_path, index=False)
+    config = {
+        "data": {
+            "path": str(csv_path),
+            "timestamp_column": "timestamp",
+            "station_column": "station_id",
+            "target_column": "PM2.5",
+            "required_columns": ["timestamp", "station_id", "PM2.5"],
+            "source_timezone": "Asia/Ho_Chi_Minh",
+            "zero_as_missing": False,
+        }
+    }
+
+    loaded = load_air_quality(config)
+
+    assert str(loaded["timestamp"].iloc[0]) == "2024-01-01 00:00:00+00:00"
+    assert str(loaded["available_at"].iloc[0]) == "2024-01-01 00:30:00+00:00"
