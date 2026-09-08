@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -56,7 +56,7 @@ class AirQualityAPISource(BaseSource):
         **kwargs: Any,
     ) -> AirQualityDataset:
         """Fetch dữ liệu thật; lỗi mạng được báo rõ thay vì trả DataFrame rỗng."""
-        end = end_time or datetime.now(UTC)
+        end = end_time or datetime.now(timezone.utc)
         start = start_time or (end - timedelta(hours=24))
         params: dict[str, Any] = {
             "city": self.city,
@@ -74,7 +74,7 @@ class AirQualityAPISource(BaseSource):
         )
 
         rows: list[dict[str, Any]] = []
-        fetched_at = datetime.now(UTC)
+        fetched_at = datetime.now(timezone.utc)
         for item in payload.get("results", []):
             raw_parameter = item.get("parameter", "")
             if isinstance(raw_parameter, dict):

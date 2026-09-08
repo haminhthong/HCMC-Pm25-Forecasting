@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,11 +48,9 @@ DEFAULT_COVERAGE = 0.9
 
 def generate_model_version(data_path: Path) -> str:
     """Sinh mã phiên bản tự động từ ngày, git commit SHA (nếu có) và data SHA-256."""
-    date_str = datetime.now(UTC).strftime("%Y%m%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     git_sha = "local"
     try:
-        import subprocess
-
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             capture_output=True,
@@ -60,7 +59,8 @@ def generate_model_version(data_path: Path) -> str:
         )
         if result.returncode == 0 and result.stdout.strip():
             git_sha = result.stdout.strip()
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
+        # Git metadata là thông tin phụ; môi trường đóng gói không có git vẫn chạy được.
         pass
     data_hash = sha256_file(data_path)[:7]
     return f"pm25-{date_str}-{git_sha}-{data_hash}"
@@ -321,7 +321,7 @@ def run_train_pipeline(
 
     metadata = {
         "model_version": model_version,
-        "created_at": datetime.now(UTC).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "model_name": candidate_champion,
         "serving_champion": serving_champion,
         "serving_strategy": statuses["serving_strategy"],

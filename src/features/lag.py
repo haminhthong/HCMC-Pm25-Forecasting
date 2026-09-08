@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE
 from src.features.exogenous import lookup_feature_at_offset
 
 
@@ -15,6 +16,7 @@ def lookup_pm25_at_offset(
     offset_hours: int,
     *,
     enforce_availability: bool = True,
+    source_timezone: str = DEFAULT_SOURCE_TIMEZONE,
 ) -> pd.Series:
     """Tra PM2.5 tại một độ lệch giờ chính xác trong cùng trạm (Exact Clock-Time Lookup).
 
@@ -29,4 +31,5 @@ def lookup_pm25_at_offset(
         target_column,
         offset_hours,
         enforce_availability=enforce_availability,
+        source_timezone=source_timezone,
     )

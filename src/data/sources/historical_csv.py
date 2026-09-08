@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -53,7 +53,7 @@ class HistoricalCSVSource(BaseSource):
                 source_timezone=kwargs.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
             )
 
-        snap_id = self.snapshot_id or f"csv-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+        snap_id = self.snapshot_id or f"csv-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
         file_hash = sha256_file(self.filepath)
 
         return AirQualityDataset(

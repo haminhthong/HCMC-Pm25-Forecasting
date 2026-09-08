@@ -3,6 +3,10 @@
 Leakage-safe next-hour air-quality forecasting with temporal backtesting, uncertainty calibration and production guardrails.
 
 [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/haminhthong/HCMC-Pm25-Forecasting/actions/workflows/ci.yml/badge.svg)](https://github.com/haminhthong/HCMC-Pm25-Forecasting/actions/workflows/ci.yml)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B.svg)](https://streamlit.io/)
+[![Docker Compose](https://img.shields.io/badge/Runtime-Docker%20Compose-2496ED.svg)](https://docs.docker.com/compose/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Trạng thái hiện tại:** đây là một prototype kiểm định hệ thống trên `data/sample/air_quality_sample.csv`. Kết quả trong README chỉ chứng minh pipeline chạy đúng trên dữ liệu mẫu; không được diễn giải thành hiệu năng đại diện cho toàn bộ chất lượng không khí TP.HCM.
@@ -189,6 +193,7 @@ hcmc-pm25-forecasting/
 │   └── dashboard.py                   # Streamlit dashboard
 ├── configs/
 │   └── config.yaml                    # Data, feature, split, model và artifact contract
+├── .github/workflows/ci.yml            # pip check, Ruff, pytest và smoke training
 ├── data/
 │   ├── sample/air_quality_sample.csv  # Smoke dataset đã commit
 │   └── README.md                      # Data card và provenance
@@ -210,6 +215,8 @@ hcmc-pm25-forecasting/
 │   ├── pipeline.py                    # Entry point offline canonical
 │   └── train.py                       # Facade CLI tương thích ngược
 ├── tests/                             # Unit, contract và compliance tests
+├── scripts/
+│   └── build_improvement_report.py     # Tùy chọn: sinh báo cáo DOCX audit
 ├── artifacts/                         # Sinh khi train; nên lưu ngoài Git nếu lớn
 ├── Dockerfile
 ├── docker-compose.yml
@@ -253,9 +260,13 @@ CSV tối thiểu phải có `timestamp`, `station_id` và `PM2.5`. Timestamp kh
 ### Chạy lint và test
 
 ```bash
+python -m pip check
 python -m ruff check src app tests
 python -m pytest -q
 ```
+
+CI GitHub Actions chạy các bước trên trên Python 3.10 và 3.11, sau đó thêm smoke training
+với `--no-artifacts` để xác nhận pipeline không ghi artifact ngoài ý muốn trong quá trình kiểm thử.
 
 ### Chạy pipeline an toàn, không ghi artifact
 
@@ -281,7 +292,7 @@ artifacts/models/<model_version>/
 └── split_manifest.json
 ```
 
-`artifacts/active_release.json` trỏ tới version đang phục vụ; `production.json` vẫn được ghi để tương thích bundle cũ. Không sửa trực tiếp model trong thư mục versioned.
+`artifacts/active_release.json` trỏ tới version đang phục vụ và được loader ưu tiên trước flat legacy mirror; `production.json` vẫn được ghi để tương thích bundle cũ. Không sửa trực tiếp model trong thư mục versioned.
 
 ### Sinh báo cáo đánh giá
 

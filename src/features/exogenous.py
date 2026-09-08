@@ -6,6 +6,8 @@ from typing import Any
 
 import pandas as pd
 
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE, normalize_timestamp_series
+
 
 def get_feature_availability(config: dict[str, Any]) -> dict[str, int]:
     """Trả về độ trễ phát hành dữ liệu của từng biến, tính theo giờ."""
@@ -21,6 +23,7 @@ def lookup_feature_at_offset(
     *,
     available_at_column: str = "available_at",
     enforce_availability: bool = True,
+    source_timezone: str = DEFAULT_SOURCE_TIMEZONE,
 ) -> pd.Series:
     """Tra giá trị theo đúng ``(station, timestamp + offset)``.
 
@@ -69,8 +72,15 @@ def lookup_feature_at_offset(
     if has_availability:
         # NaN availability không được coi là đã phát hành; đây là dữ liệu thiếu
         # metadata và phải làm feature missing thay vì vô tình cho qua leakage.
-        available = pd.to_datetime(merged["_source_available_at"], errors="coerce")
-        valid = available.notna() & (available <= merged[timestamp_column])
+        available = normalize_timestamp_series(
+            merged["_source_available_at"],
+            source_timezone=source_timezone,
+        )
+        origins = normalize_timestamp_series(
+            merged[timestamp_column],
+            source_timezone=source_timezone,
+        )
+        valid = available.notna() & origins.notna() & (available <= origins)
         merged = merged.loc[valid].copy()
         if not merged.empty:
             merged = merged.sort_values(["_row_id", "_source_available_at"], kind="stable")
@@ -110,6 +120,9 @@ def prepare_exogenous_columns(
             timestamp,
             col,
             offset_hours=-latency,
+            source_timezone=config.get("data", {}).get(
+                "source_timezone", DEFAULT_SOURCE_TIMEZONE
+            ),
         )
 
     return result

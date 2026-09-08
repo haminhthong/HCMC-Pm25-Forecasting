@@ -10,3 +10,18 @@ def test_report_contains_model_and_quality_gate():
     report = build_markdown(evaluation)
     assert "random_forest" in report
     assert "Quality gate: **đạt**" in report
+
+
+def test_report_labels_ml_candidate_separately_from_serving_fallback():
+    evaluation = {
+        "candidate_champion": "ridge",
+        "serving_champion": "persistence",
+        "candidate_ml_test": {"mae": 1.1, "rmse": 1.4},
+        "serving_champion_test": {"mae": 1.0, "rmse": 1.2},
+        "quality_gate": {"status": "không đạt"},
+    }
+
+    report = build_markdown(evaluation)
+
+    assert "Ứng viên ML (ridge)" in report
+    assert "Actual Serving Champion (persistence)" in report

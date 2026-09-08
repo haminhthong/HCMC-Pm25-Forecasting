@@ -6,6 +6,7 @@ from typing import Any
 
 import pandas as pd
 
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE
 from src.features.exogenous import lookup_feature_at_offset, prepare_exogenous_columns
 from src.features.lag import lookup_pm25_at_offset
 from src.features.rolling import add_rolling_features, add_trend_features
@@ -43,6 +44,7 @@ def build_features(
     station = data_config["station_column"]
     timestamp = data_config["timestamp_column"]
     target = data_config["target_column"]
+    source_timezone = data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE)
     result = frame.sort_values([station, timestamp], kind="stable").copy()
     label_source = result.copy()
 
@@ -55,6 +57,7 @@ def build_features(
             timestamp,
             target,
             offset_hours=0,
+            source_timezone=source_timezone,
         )
 
     # 1. Clock-time lags: tra cứu theo số giờ thực tế, không dịch chuyển vị trí dòng
@@ -65,6 +68,7 @@ def build_features(
             timestamp,
             target,
             offset_hours=-lag,
+            source_timezone=source_timezone,
         )
 
     # 2. Trend differences: chênh lệch nồng độ so với 1h và 3h trước
@@ -109,6 +113,7 @@ def build_features(
             # Target tương lai là nhãn quan sát, không phải feature tại t.
             # Không dùng available_at của t để loại nhãn t+1.
             enforce_availability=False,
+            source_timezone=source_timezone,
         )
         # Seasonal Naive 24h cho target(t+1):
         # \hat{y}_{t+1}^{seasonal24} = y_{(t+1)-24} = y_{t-23}
@@ -120,6 +125,7 @@ def build_features(
             target,
             offset_hours=-23,
             enforce_availability=False,
+            source_timezone=source_timezone,
         )
     return result
 

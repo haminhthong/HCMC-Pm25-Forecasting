@@ -64,11 +64,18 @@ def build_quality_gate(
         "rolling_mae_std": float(champion_mae_std),
         "picp_gap": float(picp_gap),
         "checks": {
-            "mae_improvement_ge_5pct": bool(passes_mae),
-            "high_recall_ge_75pct": bool(passes_recall),
+            "mae_improvement_meets_threshold": bool(passes_mae),
+            "high_recall_meets_threshold": bool(passes_recall),
             "high_recall_is_diagnostic_only": True,
-            "rolling_mae_std_le_1": bool(passes_std),
+            "rolling_mae_std_meets_threshold": bool(passes_std),
             "picp_gap_acceptable": bool(passes_picp),
+        },
+        "thresholds": {
+            "minimum_mae_improvement": float(min_improvement),
+            "minimum_high_pm25_recall": float(min_high_recall),
+            "maximum_rolling_mae_std": float(max_mae_std),
+            "maximum_picp_gap": float(max_picp_gap),
+            "coverage_target": float(coverage_target),
         },
         "status": "đạt" if passes_all else "không đạt",
     }

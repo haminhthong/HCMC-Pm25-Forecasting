@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -237,7 +237,7 @@ class Predictor:
                 "width": round(upper - lower, 2),
             },
             "model_version": self.metadata.get("model_version", "unknown"),
-            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "production_readiness": self.metadata.get("production_readiness", "unknown"),
             "calibration_gate": self.metadata.get("calibration_gate", "unknown"),
             "data_quality": runtime_quality,

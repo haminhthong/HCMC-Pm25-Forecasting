@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -47,7 +47,7 @@ class WeatherAPISource(BaseSource):
         **kwargs: Any,
     ) -> AirQualityDataset:
         """Fetch dữ liệu thật, không trả trạng thái thành công cho frame rỗng."""
-        end = end_time or datetime.now(UTC)
+        end = end_time or datetime.now(timezone.utc)
         start = start_time or (end - timedelta(hours=24))
         params = {
             "latitude": self.latitude,
@@ -73,7 +73,7 @@ class WeatherAPISource(BaseSource):
                 "rainfall": hourly.get("precipitation", []),
             }
         )
-        fetched_at = datetime.now(UTC)
+        fetched_at = datetime.now(timezone.utc)
         if frame.empty:
             frame = pd.DataFrame(
                 columns=[

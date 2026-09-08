@@ -3,7 +3,7 @@ import pandas as pd
 from src.data.loader import load_air_quality
 from src.data.regularization import audit_hourly_gaps
 from src.data.runtime_gate import audit_runtime_history
-from src.data.schema import normalize_timestamp_series
+from src.data.schema import AirQualityDataset, normalize_timestamp_series
 from src.features.exogenous import lookup_feature_at_offset
 
 
@@ -65,6 +65,21 @@ def test_runtime_gate_marks_large_gap_for_persistence_fallback():
 def test_naive_timestamp_is_stored_as_utc():
     values = normalize_timestamp_series(pd.Series(["2024-01-01 07:00"]))
     assert str(values.iloc[0]) == "2024-01-01 00:00:00+00:00"
+
+
+def test_air_quality_dataset_defaults_to_canonical_utc():
+    dataset = AirQualityDataset(
+        frame=pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2024-01-01 00:00:00"], utc=True),
+                "station_id": ["A"],
+            }
+        ),
+        source="test",
+        snapshot_id="snapshot-test",
+    )
+
+    assert dataset.timezone == "UTC"
 
 
 def test_csv_loader_normalizes_available_at_to_utc(tmp_path):

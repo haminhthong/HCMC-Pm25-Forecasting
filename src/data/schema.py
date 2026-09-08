@@ -118,7 +118,8 @@ class AirQualityDataset:
     source: str
     snapshot_id: str
     frequency: str = "1h"
-    timezone: str = "Asia/Ho_Chi_Minh"
+    # Frame canonical luôn lưu UTC; múi giờ lịch được cấu hình riêng.
+    timezone: str = CANONICAL_STORAGE_TIMEZONE
     station_ids: list[str] = field(default_factory=list)
     start_time: datetime | None = None
     end_time: datetime | None = None

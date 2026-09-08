@@ -38,6 +38,10 @@ def build_markdown(evaluation: dict) -> str:
     ]
 
     candidate_ml = evaluation.get("candidate_ml_test", evaluation.get("champion_test", {}))
+    candidate_name = evaluation.get(
+        "candidate_champion",
+        evaluation.get("model_name", "ML candidate"),
+    )
     pers = evaluation.get("persistence_test", evaluation.get("baselines", {}).get("persistence", {}))
     seasonal = evaluation.get(
         "seasonal_naive_test", evaluation.get("baselines", {}).get("seasonal_naive_24h", {})
@@ -45,7 +49,7 @@ def build_markdown(evaluation: dict) -> str:
     serving = evaluation.get("serving_champion_test", evaluation.get("champion_test", {}))
 
     test_rows.append(
-        f"| **Ứng viên ML ({evaluation.get('serving_champion', 'ML')})** | "
+        f"| **Ứng viên ML ({candidate_name})** | "
         f"{format_number(candidate_ml.get('mae'))} | {format_number(candidate_ml.get('rmse'))} | "
         f"{format_number(candidate_ml.get('mase'))} | {format_percent(candidate_ml.get('skill_score_vs_persistence'))} | "
         f"{format_number(candidate_ml.get('macro_f1'))} | {format_percent(candidate_ml.get('high_pm25_recall'))} |"
@@ -103,9 +107,9 @@ def build_markdown(evaluation: dict) -> str:
             "## 2. Đánh Giá Quality Gate & Quyết Định Serving Champion",
             "",
             f"- Quality gate: **{gate.get('status', 'N/A')}**",
-            f"- Cải thiện MAE vs Persistence: **{format_percent(gate.get('mae_improvement_vs_persistence'))}** (Yêu cầu: $\\ge 5\\%$)",
+            f"- Cải thiện MAE vs Persistence: **{format_percent(gate.get('mae_improvement_vs_persistence'))}** (đối chiếu theo cấu hình quality gate)",
             f"- Recall nhóm PM2.5 cao: **{format_percent(gate.get('high_pm25_recall'))}** (diagnostic, không phải điều kiện release)",
-            f"- Độ lệch chuẩn Rolling MAE: **{format_number(gate.get('rolling_mae_std'))}** (Yêu cầu: $\\le 1.0$)",
+            f"- Độ lệch chuẩn Rolling MAE: **{format_number(gate.get('rolling_mae_std'))}** (đối chiếu theo cấu hình quality gate)",
             f"- **Chính sách phục vụ suy luận (Serving Champion):** `{evaluation.get('serving_champion', 'N/A')}`",
 
             "",
@@ -127,10 +131,7 @@ def build_markdown(evaluation: dict) -> str:
         ]
     )
 
-
-
 def main() -> None:
-
     """Đọc evaluation JSON và ghi báo cáo Markdown."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")

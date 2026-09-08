@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +80,7 @@ def save_artifacts(
     production_pointer = artifact_root / "active_release.json"
     production_payload = {
         "active_version": model_version if versioned else ".",
-        "updated_at": datetime.now(UTC).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         "production_readiness": metadata.get("production_readiness", "unknown"),
         "calibration_gate": metadata.get("calibration_gate", "unknown"),
         "artifact_relative_path": relative_model_path.as_posix(),
