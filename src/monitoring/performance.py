@@ -26,6 +26,21 @@ def rolling_forecast_metrics(events: pd.DataFrame, window: int = 168) -> dict[st
         }
     persistence_error = work["persistence_prediction"].astype(float) - work["actual_pm25"].astype(float)
     persistence_mae = float(np.abs(persistence_error).mean())
+    if not {"lower", "upper"}.issubset(work.columns):
+        return {
+            "rows": int(len(work)),
+            "mae": float(np.abs(error).mean()),
+            "bias": float(error.mean()),
+            "skill_vs_persistence": (
+                float(1 - np.abs(error).mean() / persistence_mae) if persistence_mae else 0.0
+            ),
+            "picp": None,
+            "fallback_rate": (
+                float((work["strategy"] == "persistence_fallback").mean())
+                if "strategy" in work.columns
+                else None
+            ),
+        }
     lower = work["lower"].astype(float)
     upper = work["upper"].astype(float)
     picp = float(((work["actual_pm25"] >= lower) & (work["actual_pm25"] <= upper)).mean())
@@ -38,5 +53,9 @@ def rolling_forecast_metrics(events: pd.DataFrame, window: int = 168) -> dict[st
         ),
         "picp": picp,
         "interval_width": float((upper - lower).mean()),
-        "fallback_rate": float((work["strategy"] == "persistence_fallback").mean()),
+        "fallback_rate": (
+            float((work["strategy"] == "persistence_fallback").mean())
+            if "strategy" in work.columns
+            else None
+        ),
     }

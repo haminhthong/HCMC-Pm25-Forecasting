@@ -22,7 +22,8 @@ def compute_column_drift(
     cur_missing = float(current.isna().mean())
 
     mean_diff = float(cur_clean.mean() - ref_clean.mean())
-    std_diff = float(cur_clean.std() - ref_clean.std())
+    # ddof=0 để chuỗi chỉ có một mẫu không sinh NaN trong JSON report.
+    std_diff = float(cur_clean.std(ddof=0) - ref_clean.std(ddof=0))
 
     return {
         "reference_mean": float(ref_clean.mean()),

@@ -197,7 +197,11 @@ def forecast_station(station_id: str):
         config = predictor.config
         frame = load_air_quality(config)
         station_column = config["data"]["station_column"]
-        history = frame[frame[station_column].astype(str) == station_id].tail(168)
+        history = (
+            frame[frame[station_column].astype(str) == station_id]
+            .sort_values(config["data"]["timestamp_column"], kind="stable")
+            .tail(168)
+        )
         if history.empty:
             raise ValueError(f"Không tìm thấy history cho station_id={station_id!r}.")
         return predictor.predict(history)

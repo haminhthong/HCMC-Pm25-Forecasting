@@ -102,25 +102,22 @@ def save_artifacts(
         encoding="utf-8",
     )
 
-    # Legacy flat layout mirrors for backward compatibility if configured
+    # Legacy flat layout mirrors for backward compatibility if configured.
     if versioned and config["artifacts"].get("mirror_flat_legacy", True):
-        try:
-            joblib.dump(pipeline, artifact_root / config["artifacts"]["model_file"])
-            (artifact_root / config["artifacts"]["metadata_file"]).write_text(
-                json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
-                encoding="utf-8",
-            )
-            (artifact_root / schema_file).write_text(
-                json.dumps(feature_schema, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            (artifact_root / config["artifacts"]["evaluation_file"]).write_text(
-                json.dumps(evaluation, ensure_ascii=False, indent=2, allow_nan=False),
-                encoding="utf-8",
-            )
-            with (artifact_root / config_snapshot_file).open("w", encoding="utf-8") as file:
-                yaml.safe_dump(config, file, allow_unicode=True)
-        except Exception:
-            pass
+        joblib.dump(pipeline, artifact_root / config["artifacts"]["model_file"])
+        (artifact_root / config["artifacts"]["metadata_file"]).write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
+            encoding="utf-8",
+        )
+        (artifact_root / schema_file).write_text(
+            json.dumps(feature_schema, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (artifact_root / config["artifacts"]["evaluation_file"]).write_text(
+            json.dumps(evaluation, ensure_ascii=False, indent=2, allow_nan=False),
+            encoding="utf-8",
+        )
+        with (artifact_root / config_snapshot_file).open("w", encoding="utf-8") as file:
+            yaml.safe_dump(config, file, allow_unicode=True)
 
     return version_dir

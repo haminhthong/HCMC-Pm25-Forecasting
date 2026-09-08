@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.data.schema import DEFAULT_SOURCE_TIMEZONE, AirQualityDataset, normalize_timestamp_series
+from src.data.schema import (
+    CANONICAL_STORAGE_TIMEZONE,
+    DEFAULT_SOURCE_TIMEZONE,
+    AirQualityDataset,
+    normalize_timestamp_series,
+)
 from src.utils import sha256_file
 
 
@@ -62,7 +67,7 @@ def load_snapshot(snapshot_dir: str | Path) -> AirQualityDataset:
         source=manifest.get("source", "unknown"),
         snapshot_id=manifest["snapshot_id"],
         frequency=manifest.get("frequency", "1h"),
-        timezone=manifest.get("timezone", "Asia/Ho_Chi_Minh"),
+        timezone=manifest.get("timezone", CANONICAL_STORAGE_TIMEZONE),
         station_ids=manifest.get("station_ids", []),
         metadata=manifest.get("metadata", {}),
     )

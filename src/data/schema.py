@@ -95,7 +95,8 @@ class StationMetadata:
     longitude: float | None = None
     station_type: str = "urban_background"
     data_provider: str = "unknown"
-    timezone: str = "Asia/Ho_Chi_Minh"
+    # Frame đã được chuẩn hóa về UTC; múi giờ lịch được giữ riêng trong config.
+    timezone: str = CANONICAL_STORAGE_TIMEZONE
 
     def to_dict(self) -> dict[str, Any]:
         return {

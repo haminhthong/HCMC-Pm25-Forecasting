@@ -64,6 +64,14 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
             source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
         )
 
+    numeric_columns = [
+        data_config["target_column"],
+        *data_config.get("optional_columns", []),
+    ]
+    for column in numeric_columns:
+        if column in frame.columns:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
+
     frame = frame.dropna(subset=[station]).copy()
 
     if data_config.get("zero_as_missing", False):

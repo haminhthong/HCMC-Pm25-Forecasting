@@ -1,5 +1,5 @@
 {
-  "data_sha256": "ed3c52b80ffecd1093b386cc5bc8d1a0359da790ce1b998f4c08950b6750babb",
+  "data_sha256": "301edb58fa1c953da80d5146f8bc129588341a40d28edd353f576445d2fb005f",
   "model_name": "ridge",
   "metrics": {
     "mae": 0.31596576071541627,
@@ -10,6 +10,5 @@
     "high_pm25_recall": 1.0
   },
   "ridge_backtest_mae_mean": 0.381177349029868,
-  "extra_trees_backtest_mae_mean": 2.005533402777786
+  "hist_gradient_boosting_backtest_mae_mean": 4.110108280160735
 }
-

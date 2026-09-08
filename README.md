@@ -194,10 +194,9 @@ hcmc-pm25-forecasting/
 │   └── README.md                      # Data card và provenance
 ├── docs/
 │   ├── FORECASTING_PROTOCOL.md        # Công thức baseline, split và conformal
-│   ├── MODEL_CARD.md                  # Mô tả model card
-│   └── PORTFOLIO.md                   # Ghi chú trình bày dự án
+│   └── MODEL_CARD.md                  # Mô tả model card
 ├── notebooks/                         # Notebook kiểm tra / minh họa
-├── reports/                           # Báo cáo Markdown sinh từ evaluation artifact
+├── reports/                           # Output sinh từ evaluation artifact, không phải source
 ├── src/
 │   ├── artifacts/                     # Writer, loader, schema, release pointer
 │   ├── calibration/                   # Split Conformal

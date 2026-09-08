@@ -10,6 +10,7 @@ mlruns/
 artifacts/*.joblib
 artifacts/*.png
 artifacts/evaluation.json
+reports/evaluation_summary.md
 data/*.csv
 !data/sample/*.csv
 .streamlit/secrets.toml

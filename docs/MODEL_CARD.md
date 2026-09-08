@@ -14,7 +14,7 @@
 - `timestamp`: Chuỗi thời gian chuẩn ISO 8601, tăng dần và liên tục theo từng giờ ($\Delta t = 1\text{h}$).
 - `station_id`: Tên định danh trạm quan trắc (duy nhất 1 trạm/request).
 - `PM2.5`: Nồng độ PM2.5 tại mốc thời điểm hiện tại $t$ ($\ge 0 \;\mu\text{g/m}^3$).
-- **Lịch sử tối thiểu**: 25 quan trắc giờ liên tục để phục vụ tạo lag 24h và rolling window 24h.
+- **Lịch sử tối thiểu**: 25 giờ trên lưới hourly để phục vụ lag 24h và rolling window 24h. Giờ thiếu được regularize thành NaN; runtime gate quyết định cảnh báo hoặc fallback.
 - **Biến ngoại sinh tùy chọn**: $O_3$, $SO_2$, $NO_2$, $CO$, $TSP$, nhiệt độ, độ ẩm (nếu thiếu, pipeline tự động điền median bằng SimpleImputer).
 
 ### 2.2 Đầu ra (Standard Output Schema):
@@ -27,7 +27,7 @@
 - `forecast_strategy`: Chiến lược suy luận (`"ml_model"` hoặc `"persistence_fallback"`).
 - `serving_champion`: Tên mô hình chính thức phục vụ suy luận (`ridge`, `persistence`, ...).
 - `interval`:
-  - `method`: `"split_conformal"`
+  - `method`: `"split_conformal_prediction_interval"`
   - `coverage_target`: `0.9` (90% target coverage)
   - `lower`: Cận dưới prediction interval ($\ge 0.0$).
   - `upper`: Cận trên prediction interval.

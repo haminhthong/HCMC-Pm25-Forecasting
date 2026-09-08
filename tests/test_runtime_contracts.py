@@ -1,6 +1,7 @@
 import pandas as pd
 
 from src.data.loader import load_air_quality
+from src.data.regularization import audit_hourly_gaps
 from src.data.runtime_gate import audit_runtime_history
 from src.data.schema import normalize_timestamp_series
 from src.features.exogenous import lookup_feature_at_offset
@@ -92,3 +93,18 @@ def test_csv_loader_normalizes_available_at_to_utc(tmp_path):
 
     assert str(loaded["timestamp"].iloc[0]) == "2024-01-01 00:00:00+00:00"
     assert str(loaded["available_at"].iloc[0]) == "2024-01-01 00:30:00+00:00"
+
+
+def test_gap_audit_sorts_out_of_order_events_before_counting():
+    frame = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                ["2024-01-01 02:00", "2024-01-01 00:00", "2024-01-01 01:00"]
+            ),
+            "station_id": ["A", "A", "A"],
+        }
+    )
+
+    report = audit_hourly_gaps(frame, "timestamp", group_columns=["station_id"])
+
+    assert report["irregular_hourly_gaps"] == 0

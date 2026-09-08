@@ -69,8 +69,6 @@ else:
                 f"**Origin (t):** `{result.get('forecast_origin')}` · "
                 f"**Target (t+1):** `{result.get('forecast_for')}`"
             )
-
-
             # Vẽ biểu đồ chuỗi thời gian lịch sử và mốc dự báo
             fig = go.Figure()
             fig.add_trace(

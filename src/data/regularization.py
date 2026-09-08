@@ -150,7 +150,9 @@ def audit_hourly_gaps(
     work = frame.copy()
     work[timestamp_column] = pd.to_datetime(work[timestamp_column], errors="coerce")
     if group_columns:
-        gaps = work.groupby(list(group_columns))[timestamp_column].diff().dropna()
+        group_columns = list(group_columns)
+        work = work.sort_values([*group_columns, timestamp_column], kind="stable")
+        gaps = work.groupby(group_columns, sort=False)[timestamp_column].diff().dropna()
     else:
         gaps = work[timestamp_column].sort_values().diff().dropna()
     irregular = int((gaps != expected).sum())

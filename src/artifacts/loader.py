@@ -20,11 +20,8 @@ def resolve_artifact_dir(
     """Xác định đường dẫn thư mục artifact phiên bản đang kích hoạt (active version)."""
     dir_path = Path(artifact_path)
 
-    # 1. Direct model files in the given directory
-    if (dir_path / "model.joblib").is_file():
-        return dir_path.resolve()
-
-    # 2. Pointer release mới; production.json vẫn được đọc để tương thích artifact cũ.
+    # Pointer release mới được ưu tiên hơn flat mirror để không phục vụ nhầm
+    # model cũ khi artifact root có cả active_release và model.joblib.
     pointer_path = Path(production_pointer) if production_pointer else None
     if pointer_path is None:
         pointer_path = next(
@@ -45,6 +42,11 @@ def resolve_artifact_dir(
             flat_resolved = (pointer_path.parent / active).resolve()
             if flat_resolved.is_dir():
                 return flat_resolved
+
+    # Nếu người dùng truyền thẳng một bundle versioned không có pointer,
+    # cho phép nạp trực tiếp model.joblib tại thư mục đó.
+    if (dir_path / "model.joblib").is_file():
+        return dir_path.resolve()
 
     return dir_path.resolve()
 

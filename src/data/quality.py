@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from src.data.regularization import audit_hourly_gaps
-from src.data.schema import PHYSICAL_RANGES
+from src.data.schema import DEFAULT_SOURCE_TIMEZONE, PHYSICAL_RANGES, normalize_timestamp_series
 
 
 def validate_schema(frame: pd.DataFrame, required_columns: list[str]) -> None:
@@ -35,6 +35,7 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
     timestamp = data_config["timestamp_column"]
     station = data_config["station_column"]
     target = data_config["target_column"]
+    target_values = pd.to_numeric(frame[target], errors="coerce")
 
     duplicate_mask = frame.duplicated([station, timestamp], keep=False)
     gap_audit = audit_hourly_gaps(frame, timestamp, group_columns=[station])
@@ -47,8 +48,14 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
     }
     availability_violations = 0
     if "available_at" in frame.columns:
-        observed_at = pd.to_datetime(frame[timestamp], errors="coerce")
-        available_at = pd.to_datetime(frame["available_at"], errors="coerce")
+        observed_at = normalize_timestamp_series(
+            frame[timestamp],
+            source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+        )
+        available_at = normalize_timestamp_series(
+            frame["available_at"],
+            source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
+        )
         availability_violations = int((available_at > observed_at).sum())
 
     return {
@@ -56,8 +63,8 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
         "stations": int(frame[station].nunique()),
         "period": [str(frame[timestamp].min()), str(frame[timestamp].max())],
         "duplicate_station_timestamps": int(duplicate_mask.sum()),
-        "missing_target": int(frame[target].isna().sum()),
-        "negative_target": int((frame[target] < 0).sum()),
+        "missing_target": int(target_values.isna().sum()),
+        "negative_target": int((target_values < 0).sum()),
         "irregular_hourly_gaps": gap_audit["irregular_hourly_gaps"],
         "total_gaps_observed": gap_audit["total_gaps_observed"],
         "physical_anomalies": physical_anomalies,
