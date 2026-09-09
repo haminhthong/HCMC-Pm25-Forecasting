@@ -226,6 +226,17 @@ hcmc-pm25-forecasting/
 
 ## 7. Hướng dẫn cài đặt
 
+Source được chia theo trách nhiệm trong `src/data`, `src/features`, `src/forecasting`,
+`src/validation`, `src/calibration`, `src/artifacts`, `src/serving` và `src/monitoring`.
+`src/features/__init__.py` là điểm export duy nhất cho feature engine. Các facade
+`src/train.py`, `src/predict.py`, `src/models.py`, `src/evaluate.py` giữ tương thích import/CLI cũ.
+
+Dependency cài đặt nằm trong `requirements.txt`; công cụ kiểm thử/notebook nằm trong
+`requirements-dev.txt`. `requirements.lock` dành cho Docker và `requirements-colab.txt`
+dành cho notebook tái lập. Không duy trì thêm bản `.in` trùng lặp.
+`.dockerignore` loại cache, Git history, notebook, secret và artifact cục bộ khỏi build context;
+Docker Compose tạo model qua service `train` và chia sẻ bằng volume `artifacts`.
+
 ### Windows PowerShell
 
 ```powershell
