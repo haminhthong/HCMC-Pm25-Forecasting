@@ -26,7 +26,7 @@ def validate_config(config: dict[str, Any]) -> None:
         "data",
         "features",
         "split",
-        "model",
+        "model_comparison",
         "thresholds",
         "artifacts",
     }
@@ -102,19 +102,19 @@ def validate_config(config: dict[str, Any]) -> None:
 
     # Model comparison checks
     models_section = config.get("models")
-    candidates = config.get("model_comparison", {}).get("candidates", [])
-    if candidates:
-        if not isinstance(models_section, dict):
-            raise ValueError(
-                "Cấu hình phải có section `models:` map từng candidate name sang "
-                "hyperparameters tương ứng."
-            )
-        missing_models = [name for name in candidates if name not in models_section]
-        if missing_models:
-            raise ValueError(
-                "Các candidate sau thiếu trong `models:` section: "
-                + ", ".join(sorted(missing_models))
-            )
+    candidates = config["model_comparison"].get("candidates", [])
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("model_comparison.candidates phải là danh sách không rỗng.")
+    if not isinstance(models_section, dict):
+        raise ValueError(
+            "Cấu hình phải có section `models:` map từng candidate sang hyperparameters."
+        )
+    missing_models = [name for name in candidates if name not in models_section]
+    if missing_models:
+        raise ValueError(
+            "Các candidate sau thiếu trong `models:` section: "
+            + ", ".join(sorted(missing_models))
+        )
 
     # Backtest checks
     folds = split_cfg.get("backtest_folds")

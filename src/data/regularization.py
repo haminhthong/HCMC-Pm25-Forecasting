@@ -1,13 +1,11 @@
 """Regular hóa chuỗi thời gian theo lưới một giờ.
 
-Đây là chính sách chung cho train và serving:
+Đây là chính sách chung cho huấn luyện và serving:
 
-* If a frequency is declared (``freq="h"`` in the canonical series), insert
-  explicit ``NaN`` rows for missing hours so that lag features are computed
-  on a regular grid.
-* Missing values are kept as ``NaN``; downstream imputation is the
-  responsibility of the feature pipeline (``SimpleImputer``) and is therefore
-  identical for training and serving.
+* Với tần suất ``freq="h"``, chèn dòng ``NaN`` cho giờ thiếu để lag được tính
+  trên lưới thời gian đều.
+* Giữ giá trị thiếu là ``NaN``; pipeline feature dùng ``SimpleImputer`` ở bước
+  sau để huấn luyện và serving có cùng cách xử lý.
 * Hàm không làm thay đổi ``DataFrame`` đầu vào.
 """
 
@@ -26,34 +24,11 @@ def regularize_hourly_series(
     group_columns: Iterable[str] | None = None,
     freq: str = HOURLY_FREQ,
 ) -> pd.DataFrame:
-    """Return a DataFrame indexed on a regular hourly grid per group.
+    """Đưa từng chuỗi về lưới thời gian đều theo giờ.
 
-    Parameters
-    ----------
-    frame : DataFrame
-        Input observations with at least the ``timestamp_column``.
-    timestamp_column : str
-        Name of the timestamp column.
-    group_columns : iterable of str, optional
-        Columns that identify an independent series (e.g. ``["station"]``).
-        When provided, gaps are filled within each group. When ``None``, the
-        whole frame is treated as one series.
-    freq : str
-        Pandas frequency alias for the expected cadence. Defaults to ``"h"``
-        (hourly).
-
-    Returns
-    -------
-    DataFrame
-        A new frame sorted by group + timestamp. Missing hours are inserted
-        as ``NaN`` rows for all non-key columns. The number of inserted
-        missing rows is reported via the ``_inserted_missing_rows``
-        attribute on the returned frame for diagnostic purposes.
-
-    Notes
-    -----
-    The function does *not* drop existing rows; it only inserts gap rows.
-    Sorting uses ``kind="stable"`` to preserve input ordering for ties.
+    Hàm không xóa dòng hiện có, chỉ chèn các mốc giờ còn thiếu với giá trị
+    ``NaN``. Kết quả được sắp xếp ổn định theo nhóm và timestamp để giữ thứ tự
+    đầu vào khi có các giá trị trùng nhau.
     """
     if timestamp_column not in frame.columns:
         raise KeyError(f"timestamp_column {timestamp_column!r} không tồn tại trong frame.")
@@ -99,7 +74,7 @@ def _regularize_single_series(
     timestamp_column: str,
     freq: str,
 ) -> pd.DataFrame:
-    """Insert missing rows for a single series (no grouping)."""
+    """Chèn mốc giờ thiếu cho một chuỗi đơn, không có cột nhóm."""
     if frame.empty:
         frame.attrs["_inserted_missing_rows"] = 0
         return frame
@@ -114,7 +89,7 @@ def _regularize_single_series(
         return sorted_frame
     reindexed = sorted_frame.set_index(timestamp_column).reindex(full_index)
     reindexed.index.name = timestamp_column
-    # Inserted rows are exactly those whose index was not in the original frame.
+    # Chỉ số này đếm đúng các mốc không xuất hiện trong dữ liệu ban đầu.
     original_ts = set(sorted_frame[timestamp_column])
     inserted_mask = ~reindexed.index.isin(original_ts)
     reindexed.attrs["_inserted_missing_rows"] = int(inserted_mask.sum())
@@ -127,10 +102,7 @@ def audit_hourly_gaps(
     group_columns: Iterable[str] | None = None,
     freq: str = HOURLY_FREQ,
 ) -> dict[str, int]:
-    """Return gap statistics consistent with the regularization policy.
-
-    Kết quả được dùng trực tiếp trong báo cáo chất lượng dữ liệu.
-    """
+    """Tính thống kê khoảng trống theo đúng chính sách regularization."""
     if timestamp_column not in frame.columns:
         raise KeyError(f"timestamp_column {timestamp_column!r} không tồn tại trong frame.")
     expected = pd.to_timedelta(1, unit="h" if freq == HOURLY_FREQ else freq)

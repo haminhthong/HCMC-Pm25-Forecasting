@@ -13,7 +13,8 @@ CONFIG = {
     },
     "features": {"lags": [1], "rolling_windows": [2], "exogenous_columns": ["O3", "SO2"]},
     "split": {"test_fraction": 0.2, "backtest_folds": 2, "minimum_train_periods": 24},
-    "model": {"name": "random_forest"},
+    "model_comparison": {"candidates": ["random_forest"]},
+    "models": {"random_forest": {}},
     "thresholds": {"low_max": 12.0, "medium_max": 35.5},
     "artifacts": {"directory": "artifacts"},
 }

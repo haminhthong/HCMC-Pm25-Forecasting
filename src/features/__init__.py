@@ -1,4 +1,4 @@
-"""Features package for leakage-safe air quality feature engineering."""
+"""Các tiện ích tạo feature chất lượng không khí an toàn với leakage."""
 
 from src.features.builder import add_missingness_features, build_features, model_feature_columns
 from src.features.exogenous import get_feature_availability, prepare_exogenous_columns

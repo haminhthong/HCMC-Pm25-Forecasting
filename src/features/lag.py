@@ -1,4 +1,4 @@
-"""Exact Clock-Time Lag Lookups (Leakage-Safe)."""
+"""Tra cứu lag theo đúng thời gian thực để tránh leakage."""
 
 from __future__ import annotations
 

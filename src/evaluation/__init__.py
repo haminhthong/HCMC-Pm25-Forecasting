@@ -1,6 +1,5 @@
-"""Evaluation package for regression, classification, slices, and intervals."""
+"""Các tiện ích đánh giá hồi quy, phân lớp, lát cắt và khoảng dự báo."""
 
-from src.evaluation.evaluator import evaluate_baselines
 from src.evaluation.metrics import (
     VALID_LABELS,
     classify_pm25,
@@ -19,7 +18,6 @@ __all__ = [
     "compute_mase",
     "compute_skill_score",
     "conformal_interval_metrics",
-    "evaluate_baselines",
     "get_threshold_params",
     "metrics_by_station",
     "regression_and_classification_metrics",

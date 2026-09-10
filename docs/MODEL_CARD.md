@@ -17,7 +17,7 @@ Prototype dự báo PM2.5 của một trạm cho giờ kế tiếp từ quan tr�
 
 ## Artifact và inference
 
-Artifact hiện tại gồm `model.joblib`, `metadata.json`, `evaluation.json` và `feature_schema.json`. Cấu hình phục vụ được đọc từ `configs/config.yaml`; không có registry hoặc release pointer.
+Artifact hiện tại gồm `model.joblib`, `metadata.json`, `evaluation.json` và `feature_schema.json`. Cấu hình phục vụ được đọc từ `configs/config.yaml`.
 
 Metadata ghi:
 

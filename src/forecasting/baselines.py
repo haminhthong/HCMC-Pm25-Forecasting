@@ -1,4 +1,4 @@
-"""Fundamental time-series forecasting baselines: Persistence and Seasonal Naive 24h."""
+"""Các baseline cơ bản: Persistence và Seasonal Naive 24 giờ."""
 
 from __future__ import annotations
 

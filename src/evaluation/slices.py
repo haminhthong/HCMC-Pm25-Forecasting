@@ -1,4 +1,4 @@
-"""Temporal, diurnal, and regime-based sliced error analysis."""
+"""Phân tích sai số theo thời gian và mức ô nhiễm."""
 
 from __future__ import annotations
 
@@ -15,9 +15,8 @@ def sliced_error_analysis(
     predictions: np.ndarray,
     thresholds: dict[str, Any],
     timestamp_column: str = "timestamp",
-    station_column: str = "station",
 ) -> dict[str, Any]:
-    """Phân tích sai số theo lát cắt thời gian, trạm và mức độ ô nhiễm."""
+    """Phân tích sai số theo lát cắt giờ trong ngày và mức ô nhiễm."""
     work = test_frame.copy()
     work["_pred"] = predictions
     work["_abs_error"] = np.abs(work["target_next_hour"].to_numpy() - predictions)

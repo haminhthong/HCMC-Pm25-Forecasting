@@ -1,4 +1,4 @@
-"""Rolling window statistical features with strict closed='left' causality."""
+"""Tạo feature thống kê rolling với tính nhân quả nghiêm ngặt."""
 
 from __future__ import annotations
 

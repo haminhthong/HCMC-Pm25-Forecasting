@@ -40,7 +40,7 @@ Vì feature origin là t, offset -23 trong build_features() là đúng với tar
 Pipeline có ba vùng thời gian:
 
 1. **Train:** dùng để fit model và tạo expanding-window CV.
-2. **Calibration:** future window độc lập, dùng để tính residual quantile và Quality Gate.
+2. **Calibration:** future window độc lập, dùng để tính residual quantile và tiêu chí chọn chiến lược.
 3. **Final test:** vùng tương lai chưa được dùng để chọn model hoặc hiệu chuẩn.
 
 Nếu một hàng feature tại t có target timestamp t+1, điều kiện biên dùng trong split là:
@@ -51,16 +51,17 @@ Nếu một hàng feature tại t có target timestamp t+1, điều kiện biên
 
 ## 5. Model selection
 
-Với mỗi candidate, evaluate_candidate() chạy expanding-window folds. Candidate được chọn theo:
+Với mỗi candidate, evaluate_candidate() chạy expanding-window folds. Model tốt nhất
+được chọn theo MAE CV trung bình thấp nhất:
 
-    champion = argmin(mean(MAE_model_fold))
+    best_cv_model = argmin(mean(MAE_model_fold))
 
 Config hiện tại bật:
 
     model_comparison:
       candidates: [ridge, hist_gradient_boosting]
 
-Final test không được dùng trong phép argmin này.
+Final test không được dùng trong phép chọn này.
 
 ## 6. Metrics
 
@@ -100,22 +101,20 @@ Các chỉ số interval:
 - **MPIW:** trung bình upper - lower.
 - Coverage trên time series chỉ là kết quả kiểm định theo window; không được diễn giải thành bảo đảm vô điều kiện cho mọi giai đoạn tương lai.
 
-## 8. Quality Gate
+## 8. Tiêu chí chọn chiến lược
 
-Gate dùng ba tín hiệu chính:
+Sau khi có model tốt nhất theo CV, pipeline chỉ chọn model đó để dự báo nếu:
 
-1. Candidate phải cải thiện MAE so với Persistence tối thiểu minimum_mae_improvement.
-2. Độ lệch chuẩn MAE giữa các backtest fold không vượt maximum_rolling_mae_std.
-3. Nếu đã tính PICP, khoảng cách với coverage mục tiêu không vượt maximum_picp_gap.
+1. MAE trên calibration tốt hơn Persistence tối thiểu `minimum_mae_improvement`;
+2. độ lệch chuẩn MAE giữa các fold không vượt `maximum_cv_mae_std`;
+3. nếu có PICP calibration, khoảng cách với coverage mục tiêu không vượt
+   `maximum_picp_gap`.
 
-Recall nhóm PM2.5 cao vẫn được ghi trong report để theo dõi nghiệp vụ, nhưng là diagnostic và không tự mình quyết định release regression model.
+Nếu một điều kiện không đạt, `forecast_strategy` được đặt là `persistence`.
+Final test chỉ dùng để báo cáo kết quả, không tham gia quyết định này.
 
-Khi gate đạt:
+Recall nhóm PM2.5 cao vẫn được ghi trong báo cáo để phân tích lỗi nghiệp vụ,
+nhưng không quyết định chiến lược dự báo.
 
-    serving_strategy = ml_model
-
-Khi gate không đạt:
-
-    serving_strategy = persistence_fallback
-
-Runtime gap lớn hoặc thiếu history vẫn có thể kích hoạt fallback, kể cả khi artifact offline đã qua calibration gate.
+Ở serving, history ngắn, PM2.5 hiện tại bị thiếu, gap lớn hoặc thiếu biến ngoại
+sinh có thể kích hoạt Persistence fallback theo chính sách trong cấu hình.

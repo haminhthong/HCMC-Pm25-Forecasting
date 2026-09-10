@@ -1,4 +1,4 @@
-"""Expanding-window rolling backtest engine without future leakage."""
+"""Chạy backtest expanding-window mà không dùng dữ liệu tương lai."""
 
 from __future__ import annotations
 

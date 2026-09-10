@@ -1,4 +1,4 @@
-"""Per-station sliced performance evaluation."""
+"""Đánh giá metric độc lập theo từng trạm."""
 
 from __future__ import annotations
 

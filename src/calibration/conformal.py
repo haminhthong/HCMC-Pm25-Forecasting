@@ -1,17 +1,15 @@
-"""Tiện ích split-conformal finite-sample.
+"""Tiện ích split-conformal theo hiệu chỉnh finite-sample.
 
-This module extracts conformal logic from ``src/train.py`` so that the same
-implementation can be reused by training, evaluation, and serving. The
-quantile formula follows the finite-sample correction:
+Module này chứa logic conformal dùng chung cho huấn luyện, đánh giá và serving.
+Công thức quantile áp dụng hiệu chỉnh finite-sample:
 
     rank = ceil((n + 1) * coverage)
     rank = min(rank, n)
     quantile = sorted_residuals[rank - 1]
 
-which is the standard recommendation for split-conformal prediction intervals
-when the calibration set has size ``n``. This avoids the under-coverage bias
-of the empirical ``np.quantile(residuals, coverage)`` estimator on small
-calibration sets.
+Đây là cách tính phù hợp cho khoảng dự báo split-conformal khi calibration set
+có ``n`` mẫu. Cách này tránh xu hướng đánh giá thiếu coverage của ước lượng
+``np.quantile(residuals, coverage)`` trên calibration set nhỏ.
 """
 
 from __future__ import annotations
@@ -24,29 +22,12 @@ import pandas as pd
 
 
 def conformal_quantile(residuals: Sequence[float] | np.ndarray, coverage: float) -> float:
-    """Compute the finite-sample split-conformal residual quantile.
+    """Tính quantile residual split-conformal theo hiệu chỉnh finite-sample.
 
-    Parameters
-    ----------
-    residuals : array-like
-        Absolute residuals ``|y - y_hat|`` observed on the calibration set.
-        Must be non-empty. Caller is responsible for ensuring the calibration
-        set is independent from training data.
-    coverage : float
-        Target marginal coverage in (0, 1). For coverage=0.9 and n=10 the
-        returned quantile corresponds to the 10th smallest residual (rank
-        ceil((10+1)*0.9)=10), which is the largest residual in the set.
-
-    Returns
-    -------
-    float
-        The conformal radius ``q`` such that the interval ``y_hat +/- q``
-        achieves at least ``coverage`` coverage on the calibration sample.
-
-    Raises
-    ------
-    ValueError
-        If ``residuals`` is empty or ``coverage`` is outside (0, 1).
+    ``residuals`` là residual tuyệt đối ``|y - y_hat|`` trên calibration set
+    và phải không rỗng. Calibration set phải độc lập với dữ liệu huấn luyện.
+    Với coverage bằng 0.9 và ``n=10``, rank bằng
+    ``ceil((10+1)*0.9)=10`` nên quantile là residual lớn nhất.
     """
     arr = np.asarray(list(residuals), dtype=float)
     if arr.size == 0:
@@ -65,7 +46,7 @@ def conformal_quantile(residuals: Sequence[float] | np.ndarray, coverage: float)
 
 
 def split_conformal_residuals(y_true: Sequence[float], y_pred: Sequence[float]) -> np.ndarray:
-    """Compute the absolute residuals used for split-conformal calibration."""
+    """Tính residual tuyệt đối dùng cho bước hiệu chuẩn split-conformal."""
     y_true_arr = np.asarray(list(y_true), dtype=float)
     y_pred_arr = np.asarray(list(y_pred), dtype=float)
     if y_true_arr.shape != y_pred_arr.shape:

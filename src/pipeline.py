@@ -92,9 +92,7 @@ def run_train_pipeline(
         station_column=station,
     )
 
-    candidates = config.get("model_comparison", {}).get(
-        "candidates", [config["model"]["name"]]
-    )
+    candidates = config["model_comparison"]["candidates"]
     _, feature_columns = make_pipeline(config, candidates[0])
     backtest = {
         name: evaluate_candidate(name, train_frame, config, feature_columns)
@@ -222,7 +220,6 @@ def run_train_pipeline(
         selected_prediction,
         config["thresholds"],
         timestamp_column=timestamp,
-        station_column=station,
     )
 
     dataset_scope = "sample" if "sample" in str(data_path).lower() else "external"

@@ -60,7 +60,8 @@ def test_config_rejects_invalid_test_fraction():
         "data": {},
         "features": {"lags": [1], "rolling_windows": [3]},
         "split": {"test_fraction": 1.0, "backtest_folds": 3, "minimum_train_periods": 24},
-        "model": {},
+        "model_comparison": {"candidates": ["ridge"]},
+        "models": {"ridge": {}},
         "thresholds": {"good_max": 12, "moderate_max": 35.5},
         "artifacts": {},
     }

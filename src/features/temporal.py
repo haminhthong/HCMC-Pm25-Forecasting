@@ -1,4 +1,4 @@
-"""Cyclic temporal encodings for diurnal and day-of-week patterns."""
+"""Mã hóa chu kỳ thời gian theo giờ trong ngày và thứ trong tuần."""
 
 from __future__ import annotations
 

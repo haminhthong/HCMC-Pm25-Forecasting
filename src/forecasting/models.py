@@ -1,4 +1,4 @@
-"""Model builder with parameter forwarding for all candidate architectures."""
+"""Tạo model và chuyển hyperparameter cho các ứng viên."""
 
 from __future__ import annotations
 
@@ -25,11 +25,12 @@ def build_model(
         return Ridge(random_state=random_state, **(defaults | params))
 
     if name == "random_forest":
-        defaults = {"n_estimators": 200, "max_depth": 12, "min_samples_leaf": 2, "n_jobs": -1}
+        # Dataset mẫu nhỏ; chạy một luồng giúp CI và serving ổn định hơn.
+        defaults = {"n_estimators": 200, "max_depth": 12, "min_samples_leaf": 2, "n_jobs": 1}
         return RandomForestRegressor(random_state=random_state, **(defaults | params))
 
     if name == "extra_trees":
-        defaults = {"n_estimators": 200, "min_samples_leaf": 2, "n_jobs": -1}
+        defaults = {"n_estimators": 200, "min_samples_leaf": 2, "n_jobs": 1}
         return ExtraTreesRegressor(random_state=random_state, **(defaults | params))
 
     if name == "hist_gradient_boosting":

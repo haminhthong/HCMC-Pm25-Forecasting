@@ -1,4 +1,4 @@
-"""Data quality audits, schema validation, and physical range checks."""
+"""Kiểm tra chất lượng, schema và miền giá trị vật lý của dữ liệu."""
 
 from __future__ import annotations
 

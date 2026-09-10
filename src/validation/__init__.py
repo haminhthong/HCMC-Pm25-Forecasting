@@ -1,4 +1,4 @@
-"""Validation package: time-ordered split, manifests, and expanding-window backtest."""
+"""Tiện ích chia theo thời gian và backtest expanding-window."""
 
 from src.validation.backtest import evaluate_candidate, expanding_time_folds
 from src.validation.split import generate_split_manifest, split_by_time

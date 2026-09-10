@@ -1,4 +1,4 @@
-"""Metrics for regression, classification, and conformal intervals."""
+"""Các metric hồi quy, phân lớp và khoảng dự báo conformal."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def regression_and_classification_metrics(
     predicted_labels = classify_pm25(y_pred_arr, low_max, medium_max, labels)
     high_mask = y_true_arr >= medium_max
 
-    # Support by class
+    # Đếm số mẫu thực tế của từng nhóm.
     support_by_class = {
         label: int((true_labels == label).sum()) for label in labels
     }

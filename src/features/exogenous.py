@@ -101,7 +101,7 @@ def prepare_exogenous_columns(
     frame: pd.DataFrame,
     config: dict[str, Any],
 ) -> pd.DataFrame:
-    """Standardize exogenous features according to the availability contract."""
+    """Chuẩn hóa feature ngoại sinh theo hợp đồng availability."""
     result = frame.copy()
     station = config["data"]["station_column"]
     timestamp = config["data"]["timestamp_column"]

@@ -1,6 +1,6 @@
-"""Canonical Data Contract & Schema for Air Quality Time Series.
+"""Schema chuẩn và hợp đồng dữ liệu cho chuỗi thời gian chất lượng không khí.
 
-Defines the canonical columns and timestamp rules for the sample CSV source.
+Định nghĩa các cột chuẩn và quy tắc timestamp của nguồn CSV mẫu.
 """
 
 from __future__ import annotations

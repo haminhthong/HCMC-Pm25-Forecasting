@@ -22,11 +22,6 @@ split:
   coverage: 0.9
   backtest_folds: 3
   minimum_train_periods: 12
-model:
-  name: hist_gradient_boosting
-  params:
-    max_iter: 200
-    learning_rate: 0.05
 model_comparison:
   candidates: [ridge, hist_gradient_boosting]
 models:

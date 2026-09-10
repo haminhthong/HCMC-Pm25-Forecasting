@@ -31,8 +31,8 @@ Dự án nhận history PM2.5 theo từng trạm và dự báo giá trị của 
 | Lag theo timestamp, rolling causal, time features | Xử lý late-arriving observation theo lịch chạy |
 | Temporal train/calibration/test split | Orchestration định kỳ |
 | Expanding-window backtest | Data drift monitoring liên tục |
-| Ridge, HistGradientBoosting, Persistence, Seasonal Naive 24h | Model registry/promotion |
-| Split conformal interval | Benchmark citywide với dữ liệu lớn |
+| Ridge, HistGradientBoosting, Persistence, Seasonal Naive 24h | Mở rộng benchmark citywide với dữ liệu lớn |
+| Split conformal interval | Hiệu chuẩn lại trên các giai đoạn dài hơn |
 | FastAPI và Streamlit demo | |
 | CI với Ruff, pytest, pip check và smoke train | |
 
@@ -152,7 +152,6 @@ hcmc-pm25-forecasting/
 │   ├── calibration/
 │   │   └── conformal.py
 │   ├── evaluation/
-│   │   ├── evaluator.py
 │   │   ├── metrics.py
 │   │   ├── slices.py
 │   │   └── station_metrics.py
@@ -185,7 +184,8 @@ hcmc-pm25-forecasting/
 └── README.md
 ```
 
-`artifacts/` là output cục bộ sau khi train và không cần commit. Không có model registry, release pointer, config snapshot hay artifact version history trong V1.
+`artifacts/` là output cục bộ sau khi train và không cần commit. V1 chỉ giữ một
+bộ artifact hiện tại để phục vụ demo.
 
 ## Cài đặt
 
@@ -270,7 +270,7 @@ Dashboard chỉ là demo trực quan; các nhóm `Thấp/Trung bình/Cao` trong 
 
 ## Dockerfile
 
-Dockerfile chỉ đóng gói API; không dùng Docker Compose và không tự huấn luyện trong image.
+Dockerfile chỉ đóng gói API và không tự huấn luyện trong image.
 
 ```bash
 python -m src.pipeline train --config configs/config.yaml

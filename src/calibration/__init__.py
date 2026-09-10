@@ -1,7 +1,4 @@
-"""Tiện ích split-conformal finite-sample cho khoảng dự báo.
-
-Public API lives in :mod:`src.calibration.conformal`.
-"""
+"""Tiện ích split-conformal finite-sample cho khoảng dự báo."""
 
 from __future__ import annotations
 

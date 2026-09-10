@@ -1,4 +1,4 @@
-"""Pipeline trainer and preprocessor constructor."""
+"""Tạo pipeline tiền xử lý và model cho từng ứng viên."""
 
 from __future__ import annotations
 
@@ -16,22 +16,16 @@ from src.forecasting.models import build_model
 def resolve_candidate_params(config: dict[str, Any], model_name: str) -> dict[str, Any]:
     """Lấy hyperparameter đúng theo tên candidate trong config."""
     models_section = config.get("models") or {}
-    if model_name in models_section:
-        params = models_section[model_name]
-        return dict(params) if isinstance(params, dict) else {}
-    legacy_champion = config.get("model", {}).get("name")
-    if model_name == legacy_champion:
-        legacy_params = config.get("model", {}).get("params") or {}
-        return dict(legacy_params) if isinstance(legacy_params, dict) else {}
-    return {}
+    params = models_section.get(model_name, {})
+    return dict(params) if isinstance(params, dict) else {}
 
 
 def make_pipeline(config: dict[str, Any], model_name: str) -> tuple[Pipeline, list[str]]:
     """Tạo preprocessing và model trong cùng một sklearn Pipeline.
 
-    - Với Ridge: dùng SimpleImputer + StandardScaler.
-    - Với Tree Ensembles (RandomForest, ExtraTrees, HistGradientBoosting):
-      chỉ dùng SimpleImputer (StandardScaler không cần thiết và được lược bỏ).
+    - Ridge dùng SimpleImputer + StandardScaler.
+    - Các model cây (RandomForest, ExtraTrees, HistGradientBoosting) chỉ dùng
+      SimpleImputer vì không cần StandardScaler.
     """
     station = config["data"]["station_column"]
     numeric = model_feature_columns(config)
