@@ -1,4 +1,4 @@
-"""Temporal data splitting and split manifest generator."""
+"""Chia dữ liệu theo thời gian và tạo tóm tắt split."""
 
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def generate_split_manifest(
     timestamp_column: str = "timestamp",
     station_column: str = "station",
 ) -> dict[str, Any]:
-    """Tạo split manifest ghi lại ranh giới thời gian, trạm và số lượng dòng (Point 16)."""
+    """Tạo tóm tắt ranh giới thời gian, trạm và số lượng dòng."""
     stations = sorted(
         set(train_frame[station_column].unique())
         | set(cal_frame[station_column].unique() if not cal_frame.empty else [])

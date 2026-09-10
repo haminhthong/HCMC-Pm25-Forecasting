@@ -42,7 +42,7 @@ def regression_and_classification_metrics(
     y_pred: Any,
     thresholds: dict[str, Any],
 ) -> dict[str, Any]:
-    """Tính đồng thời metric hồi quy, phân lớp và phân tích class imbalance (Point 22)."""
+    """Tính metric hồi quy, phân lớp và support theo nhóm PM2.5."""
     y_true_arr = np.asarray(y_true, dtype=float)
     y_pred_arr = np.asarray(y_pred, dtype=float)
     low_max, medium_max, labels = get_threshold_params(thresholds)
@@ -57,7 +57,7 @@ def regression_and_classification_metrics(
     }
     observed_labels = [label for label in labels if (true_labels == label).any()]
 
-    # Macro F1: both all configured and observed only (Point 22)
+    # Báo cáo cả macro-F1 trên toàn bộ nhãn và trên nhãn thực sự xuất hiện.
     macro_f1_all = float(
         f1_score(true_labels, predicted_labels, labels=labels, average="macro", zero_division=0)
     )

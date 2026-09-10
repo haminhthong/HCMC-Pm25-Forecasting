@@ -1,20 +1,18 @@
-from src.train import build_quality_gate
+from src.forecasting.selection import select_forecast_strategy
 
 
-def test_quality_gate_evaluates_multi_criteria():
+def test_model_selection_compares_against_persistence():
     config = {
-        "quality_gate": {
+        "model_selection": {
             "minimum_mae_improvement": 0.05,
-            "minimum_high_pm25_recall": 0.75,
-            "maximum_rolling_mae_std": 1.0,
+            "maximum_cv_mae_std": 1.0,
         }
     }
-    passed_metrics = {"mae": 1.0, "high_pm25_recall": 0.8}
-    persistence_metrics = {"mae": 2.0, "high_pm25_recall": 0.5}
+    passed_metrics = {"mae": 1.0}
+    persistence_metrics = {"mae": 2.0}
 
-    passed_gate = build_quality_gate(passed_metrics, persistence_metrics, 0.5, config)
-    assert passed_gate["passes_baseline"] is True
+    passed = select_forecast_strategy("ridge", passed_metrics, persistence_metrics, 0.5, config)
+    assert passed["forecast_strategy"] == "ridge"
 
-    failed_metrics = {"mae": 1.98, "high_pm25_recall": 0.6}  # improvement < 5%
-    failed_gate = build_quality_gate(failed_metrics, persistence_metrics, 0.5, config)
-    assert failed_gate["passes_baseline"] is False
+    failed = select_forecast_strategy("ridge", {"mae": 1.98}, persistence_metrics, 0.5, config)
+    assert failed["forecast_strategy"] == "persistence"

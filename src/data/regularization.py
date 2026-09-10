@@ -1,16 +1,6 @@
-"""Hourly time-series regularization (P0.3: shared train/serving gap policy).
+"""Regular hóa chuỗi thời gian theo lưới một giờ.
 
-The pre-P0 codebase had two divergent policies:
-
-* ``src/data.py::audit_air_quality`` only *reported* irregular gaps
-  (``irregular_hourly_gaps`` counter) and let the feature pipeline propagate
-  NaN through lag lookups, which the ``SimpleImputer(median)`` later filled.
-* ``src/predict.py`` *rejected* the request with ``ValueError`` whenever any
-  consecutive gap was not exactly 1 hour.
-
-That asymmetry was a classic training-serving skew: a calibration set that
-was perfectly legal during training would be refused at inference. This
-module provides a single canonical policy used by both code paths:
+Đây là chính sách chung cho train và serving:
 
 * If a frequency is declared (``freq="h"`` in the canonical series), insert
   explicit ``NaN`` rows for missing hours so that lag features are computed
@@ -18,8 +8,7 @@ module provides a single canonical policy used by both code paths:
 * Missing values are kept as ``NaN``; downstream imputation is the
   responsibility of the feature pipeline (``SimpleImputer``) and is therefore
   identical for training and serving.
-* The function is pure: it returns a new ``DataFrame`` and never mutates the
-  input.
+* Hàm không làm thay đổi ``DataFrame`` đầu vào.
 """
 
 from __future__ import annotations
@@ -140,9 +129,7 @@ def audit_hourly_gaps(
 ) -> dict[str, int]:
     """Return gap statistics consistent with the regularization policy.
 
-    The output schema is intentionally compatible with the pre-P0
-    ``audit_air_quality`` field ``irregular_hourly_gaps`` so that the two
-    audit surfaces can be merged.
+    Kết quả được dùng trực tiếp trong báo cáo chất lượng dữ liệu.
     """
     if timestamp_column not in frame.columns:
         raise KeyError(f"timestamp_column {timestamp_column!r} không tồn tại trong frame.")

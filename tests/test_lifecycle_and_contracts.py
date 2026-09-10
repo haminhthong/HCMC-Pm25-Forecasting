@@ -9,8 +9,6 @@ import pytest
 
 from src.calibration.conformal import conformal_quantile
 from src.data.regularization import regularize_hourly_series
-from src.data.schema import AirQualityDataset
-from src.data.snapshot import load_snapshot, save_snapshot
 from src.evaluation.metrics import regression_and_classification_metrics
 from src.features.lag import lookup_pm25_at_offset
 from src.forecasting.models import build_model
@@ -190,29 +188,3 @@ def test_classification_metrics_handles_absent_classes():
     assert metrics["macro_f1_observed_classes"] == 1.0
     # Trên cả 3 class cấu hình, do class Thấp không có mẫu -> F1 Thấp = 0 -> (1+1+0)/3 = 0.6667
     assert metrics["macro_f1_all_configured_classes"] == pytest.approx(0.6667, abs=1e-3)
-
-
-def test_canonical_dataset_and_snapshot():
-    """Kiểm tra lưu và nạp snapshot canonical AirQualityDataset."""
-    import tempfile
-
-    with tempfile.TemporaryDirectory(dir=Path.cwd()) as tmpdir:
-        tmp_path = Path(tmpdir)
-        df = pd.DataFrame(
-            {
-                "timestamp": pd.date_range("2024-01-01", periods=5, freq="h"),
-                "station_id": ["A"] * 5,
-                "PM2.5": [15.0, 16.0, 17.0, 18.0, 19.0],
-            }
-        )
-        dataset = AirQualityDataset(
-            frame=df,
-            source="test_source",
-            snapshot_id="snap-test-01",
-        )
-        snap_dir = save_snapshot(dataset, base_dir=tmp_path)
-        loaded = load_snapshot(snap_dir)
-
-        assert loaded.snapshot_id == "snap-test-01"
-        assert len(loaded.frame) == 5
-        assert loaded.station_ids == ["A"]

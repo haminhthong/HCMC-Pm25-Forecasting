@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.predict import Predictor
+from src.serving.predictor import Predictor
 
 
 @pytest.fixture
@@ -106,8 +106,8 @@ def test_prediction_rejects_negative_pm25(sample_config, monkeypatch):
         predictor.predict(records)
 
 
-def test_missing_o3_so2_can_be_predicted_end_to_end(sample_config, monkeypatch):
-    """Kiểm tra truyền dữ liệu thiếu hoàn toàn O3/SO2 qua pipeline dự báo vẫn trả kết quả hợp lệ."""
+def test_missing_o3_so2_uses_persistence_fallback(sample_config, monkeypatch):
+    """Thiếu toàn bộ exogenous thì vẫn dự báo được bằng Persistence."""
 
     class FakeModel:
         def predict(self, df):
@@ -115,7 +115,7 @@ def test_missing_o3_so2_can_be_predicted_end_to_end(sample_config, monkeypatch):
 
     monkeypatch.setattr("joblib.load", lambda path: FakeModel())
     predictor = Predictor(sample_config)
-    predictor.metadata["serving_champion"] = "fake_model"
+    predictor.metadata["forecast_strategy"] = "fake_model"
 
     records = pd.DataFrame(
         {
@@ -127,13 +127,14 @@ def test_missing_o3_so2_can_be_predicted_end_to_end(sample_config, monkeypatch):
         }
     )
     res = predictor.predict(records)
-    assert res["predicted_pm25"] == 25.4
+    assert res["predicted_pm25"] == 15.0
     assert np.isfinite(res["predicted_pm25"])
     assert res["level"] in ["Thấp", "Trung bình", "Cao"]
+    assert res["forecast_strategy"] == "persistence"
 
 
-def test_persistence_champion_fallback(sample_config, monkeypatch):
-    """Kiểm tra fallback khi serving_champion là persistence."""
+def test_persistence_strategy_fallback(sample_config, monkeypatch):
+    """Kiểm tra chiến lược Persistence không gọi model ML."""
 
     class FakeModel:
         def predict(self, df):
@@ -142,7 +143,7 @@ def test_persistence_champion_fallback(sample_config, monkeypatch):
     monkeypatch.setattr("joblib.load", lambda path: FakeModel())
     predictor = Predictor(sample_config)
     predictor.metadata = {
-        "serving_champion": "persistence",
+        "forecast_strategy": "persistence",
         "prediction_interval": {
             "method": "split_conformal",
             "coverage": 0.95,

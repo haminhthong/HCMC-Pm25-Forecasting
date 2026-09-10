@@ -18,7 +18,7 @@ def build_model(
     random_state: int,
     params: dict[str, Any] | None = None,
 ) -> RegressorMixin:
-    """Tạo model từ tên với params được truyền đầy đủ (P0.5 fix)."""
+    """Tạo model từ tên với hyperparameter đã khai báo."""
     params = dict(params or {})
     if name == "ridge":
         defaults = {"alpha": 1.0}

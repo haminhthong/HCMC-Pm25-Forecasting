@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from src.train import expanding_time_folds, split_by_time
+from src.validation.backtest import expanding_time_folds
+from src.validation.split import split_by_time
 
 
 def test_train_target_never_crosses_test_boundary():

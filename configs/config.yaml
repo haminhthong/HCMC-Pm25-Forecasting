@@ -19,7 +19,7 @@ features:
 split:
   test_fraction: 0.1
   calibration_fraction: 0.1
-  coverage: 0.9  # P0.2 — target marginal coverage for split-conformal interval
+  coverage: 0.9
   backtest_folds: 3
   minimum_train_periods: 12
 model:
@@ -29,10 +29,6 @@ model:
     learning_rate: 0.05
 model_comparison:
   candidates: [ridge, hist_gradient_boosting]
-# P0.5 — every candidate declared under `model_comparison.candidates` MUST
-# have an entry in this block. The single-model `model.params` block above
-# remains as a backward-compatible fallback when a candidate name matches
-# `model.name`.
 models:
   ridge:
     alpha: 1.0
@@ -44,11 +40,12 @@ thresholds:
   low_max: 12.0
   medium_max: 35.5
   labels: [Thấp, Trung bình, Cao]
-quality_gate:
+model_selection:
   minimum_mae_improvement: 0.05
-  minimum_high_pm25_recall: 0.75
-  maximum_rolling_mae_std: 1.0
+  maximum_cv_mae_std: 1.0
   maximum_picp_gap: 0.15
+
+calibration:
   minimum_calibration_samples_per_station: 20
 feature_availability:
   PM2.5: 0
@@ -65,8 +62,7 @@ artifacts:
   metadata_file: metadata.json
   evaluation_file: evaluation.json
   feature_schema_file: feature_schema.json
-  config_snapshot_file: config_snapshot.yaml
-mlflow:
-  enabled: false
-  tracking_uri: mlruns
-  experiment_name: hcmc-pm25-next-hour
+
+serving:
+  required_history_hours: 25
+  allowed_gap_hours: 6

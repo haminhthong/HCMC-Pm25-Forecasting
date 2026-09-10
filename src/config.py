@@ -64,7 +64,7 @@ def validate_config(config: dict[str, Any]) -> None:
     ):
         raise ValueError(
             "split.calibration_fraction phải nằm trong khoảng (0, 1) để đảm bảo "
-            "tập hiệu chuẩn độc lập cho Conformal Prediction (P0.1)."
+            "tập hiệu chuẩn độc lập cho Conformal Prediction."
         )
     if (
         not has_calendar_boundaries
@@ -76,6 +76,30 @@ def validate_config(config: dict[str, Any]) -> None:
     if not isinstance(coverage, int | float) or not 0 < coverage < 1:
         raise ValueError("split.coverage phải nằm trong khoảng (0, 1).")
 
+    selection_cfg = config.get("model_selection", {})
+    minimum_improvement = selection_cfg.get("minimum_mae_improvement", 0.05)
+    maximum_cv_std = selection_cfg.get("maximum_cv_mae_std", 1.0)
+    maximum_picp_gap = selection_cfg.get("maximum_picp_gap", 0.15)
+    if not isinstance(minimum_improvement, int | float) or minimum_improvement < 0:
+        raise ValueError("model_selection.minimum_mae_improvement phải không âm.")
+    if not isinstance(maximum_cv_std, int | float) or maximum_cv_std < 0:
+        raise ValueError("model_selection.maximum_cv_mae_std phải không âm.")
+    if not isinstance(maximum_picp_gap, int | float) or not 0 <= maximum_picp_gap < 1:
+        raise ValueError("model_selection.maximum_picp_gap phải nằm trong [0, 1).")
+
+    calibration_cfg = config.get("calibration", {})
+    minimum_calibration = calibration_cfg.get("minimum_calibration_samples_per_station", 20)
+    if not isinstance(minimum_calibration, int) or minimum_calibration < 1:
+        raise ValueError(
+            "calibration.minimum_calibration_samples_per_station phải là số nguyên dương."
+        )
+
+    serving_cfg = config.get("serving", {})
+    for key in ("required_history_hours", "allowed_gap_hours"):
+        value = serving_cfg.get(key, 25 if key == "required_history_hours" else 6)
+        if not isinstance(value, int) or value < 1:
+            raise ValueError(f"serving.{key} phải là số nguyên dương.")
+
     # Model comparison checks
     models_section = config.get("models")
     candidates = config.get("model_comparison", {}).get("candidates", [])
@@ -83,7 +107,7 @@ def validate_config(config: dict[str, Any]) -> None:
         if not isinstance(models_section, dict):
             raise ValueError(
                 "Cấu hình phải có section `models:` map từng candidate name sang "
-                "hyperparameters tương ứng (P0.5)."
+                "hyperparameters tương ứng."
             )
         missing_models = [name for name in candidates if name not in models_section]
         if missing_models:

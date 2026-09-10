@@ -1,19 +1,16 @@
-"""Master Pipeline CLI: Data Ingestion -> Regularization -> Features -> Backtest -> Calibration -> Artifact -> Evaluation."""
+"""Pipeline huấn luyện, đánh giá và dự báo PM2.5 một giờ tiếp theo."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from src.artifacts.schema import ForecastContext
 from src.artifacts.writer import save_artifacts
 from src.calibration.conformal import (
     split_conformal_residuals,
@@ -32,11 +29,8 @@ from src.evaluation.metrics import (
 from src.evaluation.slices import sliced_error_analysis
 from src.evaluation.station_metrics import metrics_by_station
 from src.features.builder import build_features
-from src.forecasting.baselines import (
-    persistence_predictions,
-    seasonal_naive_predictions,
-)
-from src.forecasting.selector import build_quality_gate, resolve_model_statuses
+from src.forecasting.baselines import persistence_predictions, seasonal_naive_predictions
+from src.forecasting.selection import select_forecast_strategy
 from src.forecasting.trainer import make_pipeline
 from src.serving.predictor import Predictor
 from src.utils import sha256_file
@@ -46,31 +40,11 @@ from src.validation.split import generate_split_manifest, split_by_time
 DEFAULT_COVERAGE = 0.9
 
 
-def generate_model_version(data_path: Path) -> str:
-    """Sinh mã phiên bản tự động từ ngày, git commit SHA (nếu có) và data SHA-256."""
-    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    git_sha = "local"
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            git_sha = result.stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        # Git metadata là thông tin phụ; môi trường đóng gói không có git vẫn chạy được.
-        pass
-    data_hash = sha256_file(data_path)[:7]
-    return f"pm25-{date_str}-{git_sha}-{data_hash}"
-
-
 def run_train_pipeline(
     config_path: str = "configs/config.yaml",
     persist_artifacts: bool = True,
 ) -> dict[str, Any]:
-    """Chạy toàn bộ pipeline huấn luyện, calibration, backtest và lưu artifact."""
+    """Chạy load, regularization, feature engineering, backtest và calibration."""
     config = load_config(config_path)
     data_path = resolve_data_path(config["data"]["path"])
     raw = load_air_quality(config)
@@ -79,14 +53,11 @@ def run_train_pipeline(
     station = config["data"]["station_column"]
     target = config["data"]["target_column"]
 
-    # 1. Regularize hourly series (P0.3: shared train/serving gap policy)
     regularized = regularize_hourly_series(
         raw,
         timestamp_column=timestamp,
         group_columns=[station],
     )
-
-    # 2. Build leakage-safe features
     frame = (
         build_features(regularized, config, include_target=True)
         .dropna(subset=[target, "target_next_hour"])
@@ -94,318 +65,281 @@ def run_train_pipeline(
         .reset_index(drop=True)
     )
 
-    # 3. Time-ordered train / calibration / test split
-    test_fraction = config["split"].get("test_fraction")
-    calibration_fraction = config["split"].get("calibration_fraction", 0.1)
-    coverage_target = float(config["split"].get("coverage", DEFAULT_COVERAGE))
-
-    train_frame, cal_frame, test_frame = split_by_time(
+    split_config = config["split"]
+    coverage_target = float(split_config.get("coverage", DEFAULT_COVERAGE))
+    train_frame, calibration_frame, test_frame = split_by_time(
         frame,
-        test_fraction=test_fraction,
-        calibration_fraction=calibration_fraction,
+        test_fraction=split_config.get("test_fraction"),
+        calibration_fraction=split_config.get("calibration_fraction", 0.1),
         timestamp_column=timestamp,
-        train_end=config["split"].get("train_end"),
-        calibration_end=config["split"].get("calibration_end"),
-        test_end=config["split"].get("test_end"),
+        train_end=split_config.get("train_end"),
+        calibration_end=split_config.get("calibration_end"),
+        test_end=split_config.get("test_end"),
     )
-
-    # P0.1 — zero calibration leakage
-    if cal_frame.empty:
+    if calibration_frame.empty:
         raise ValueError(
-            "calibration set rỗng sau split_by_time; P0.1 không cho phép "
-            "fallback sang train_frame hoặc test_frame. Hãy tăng "
-            "split.calibration_fraction hoặc cung cấp thêm dữ liệu."
+            "Tập calibration không được rỗng; hãy tăng calibration_fraction "
+            "hoặc cung cấp thêm dữ liệu."
         )
     if test_frame.empty:
-        raise ValueError(
-            "test set rỗng sau split_by_time; không thể đánh giá. "
-            "Hãy tăng split.test_fraction hoặc cung cấp thêm dữ liệu."
-        )
+        raise ValueError("Tập test không được rỗng; hãy cung cấp thêm dữ liệu.")
 
-    # Generate split manifest
     split_manifest = generate_split_manifest(
         train_frame,
-        cal_frame,
+        calibration_frame,
         test_frame,
         timestamp_column=timestamp,
         station_column=station,
     )
 
-    # 4. Expanding-window backtest on candidates
-    _, columns = make_pipeline(config, config["model"]["name"])
-    candidates = config.get("model_comparison", {}).get("candidates", [config["model"]["name"]])
-    backtest = {name: evaluate_candidate(name, train_frame, config, columns) for name in candidates}
-    candidate_champion = min(backtest, key=lambda name: backtest[name]["mae_mean"])
-
-    # 5. Fit champion on full development train frame
-    pipeline, columns = make_pipeline(config, candidate_champion)
-    pipeline.fit(train_frame[columns], train_frame["target_next_hour"])
-
-    # 6. Conformal Calibration on dedicated future calibration window (P0.1 + P0.2)
-    ml_cal_pred = pipeline.predict(cal_frame[columns])
-    ml_cal_residuals = split_conformal_residuals(
-        cal_frame["target_next_hour"],
-        ml_cal_pred,
+    candidates = config.get("model_comparison", {}).get(
+        "candidates", [config["model"]["name"]]
     )
-    ml_global_q90, ml_station_q90 = station_conformal_quantiles(
-        cal_frame,
-        ml_cal_residuals,
+    _, feature_columns = make_pipeline(config, candidates[0])
+    backtest = {
+        name: evaluate_candidate(name, train_frame, config, feature_columns)
+        for name in candidates
+    }
+    best_cv_model = min(backtest, key=lambda name: backtest[name]["mae_mean"])
+
+    model_pipeline, feature_columns = make_pipeline(config, best_cv_model)
+    model_pipeline.fit(train_frame[feature_columns], train_frame["target_next_hour"])
+
+    model_cal_pred = model_pipeline.predict(calibration_frame[feature_columns])
+    persistence_cal_pred = persistence_predictions(calibration_frame, target)
+    model_cal_residuals = split_conformal_residuals(
+        calibration_frame["target_next_hour"], model_cal_pred
+    )
+    persistence_cal_residuals = split_conformal_residuals(
+        calibration_frame["target_next_hour"], persistence_cal_pred
+    )
+    minimum_calibration_samples = int(
+        config.get("calibration", {}).get("minimum_calibration_samples_per_station", 20)
+    )
+    model_global_q, model_station_q = station_conformal_quantiles(
+        calibration_frame,
+        model_cal_residuals,
         station_column=station,
         coverage=coverage_target,
-        minimum_samples=int(config.get("quality_gate", {}).get("minimum_calibration_samples_per_station", 20)),
+        minimum_samples=minimum_calibration_samples,
     )
-    pers_cal_residuals = split_conformal_residuals(
-        cal_frame["target_next_hour"],
-        persistence_predictions(cal_frame, target),
-    )
-    pers_global_q90, pers_station_q90 = station_conformal_quantiles(
-        cal_frame,
-        pers_cal_residuals,
+    persistence_global_q, persistence_station_q = station_conformal_quantiles(
+        calibration_frame,
+        persistence_cal_residuals,
         station_column=station,
         coverage=coverage_target,
-        minimum_samples=int(config.get("quality_gate", {}).get("minimum_calibration_samples_per_station", 20)),
-    )
-    ml_residual_q = ml_global_q90
-    pers_residual_q = pers_global_q90
-
-    # Calibration evaluation
-    cal_ml_metrics = regression_and_classification_metrics(
-        cal_frame["target_next_hour"],
-        ml_cal_pred,
-        config["thresholds"],
-    )
-    cal_pers_metrics = regression_and_classification_metrics(
-        cal_frame["target_next_hour"],
-        persistence_predictions(cal_frame, target),
-        config["thresholds"],
+        minimum_samples=minimum_calibration_samples,
     )
 
-    # Conformal calibration coverage check
-    cal_lower = np.maximum(0.0, ml_cal_pred - ml_residual_q)
-    cal_upper = ml_cal_pred + ml_residual_q
-    cal_picp = float(np.mean((cal_frame["target_next_hour"] >= cal_lower) & (cal_frame["target_next_hour"] <= cal_upper)))
-
-    quality_gate = build_quality_gate(
-        cal_ml_metrics,
-        cal_pers_metrics,
-        backtest[candidate_champion]["mae_std"],
+    model_cal_metrics = regression_and_classification_metrics(
+        calibration_frame["target_next_hour"], model_cal_pred, config["thresholds"]
+    )
+    persistence_cal_metrics = regression_and_classification_metrics(
+        calibration_frame["target_next_hour"], persistence_cal_pred, config["thresholds"]
+    )
+    calibration_lower = np.maximum(0.0, model_cal_pred - model_global_q)
+    calibration_upper = model_cal_pred + model_global_q
+    calibration_picp = float(
+        np.mean(
+            (calibration_frame["target_next_hour"] >= calibration_lower)
+            & (calibration_frame["target_next_hour"] <= calibration_upper)
+        )
+    )
+    model_selection = select_forecast_strategy(
+        best_cv_model,
+        model_cal_metrics,
+        persistence_cal_metrics,
+        backtest[best_cv_model]["mae_std"],
         config,
-        conformal_picp=cal_picp,
+        conformal_picp=calibration_picp,
         coverage_target=coverage_target,
     )
+    forecast_strategy = model_selection["forecast_strategy"]
 
-    # 7. Independent Final Test Evaluation
-    candidate_ml_pred = pipeline.predict(test_frame[columns])
-    pers_test_pred = persistence_predictions(test_frame, target)
+    model_test_pred = model_pipeline.predict(test_frame[feature_columns])
+    persistence_test_pred = persistence_predictions(test_frame, target)
     seasonal_test_pred = seasonal_naive_predictions(test_frame, target)
-
-    candidate_ml_test = regression_and_classification_metrics(
-        test_frame["target_next_hour"],
-        candidate_ml_pred,
-        config["thresholds"],
+    model_test = regression_and_classification_metrics(
+        test_frame["target_next_hour"], model_test_pred, config["thresholds"]
     )
     persistence_test = regression_and_classification_metrics(
-        test_frame["target_next_hour"],
-        pers_test_pred,
-        config["thresholds"],
+        test_frame["target_next_hour"], persistence_test_pred, config["thresholds"]
     )
-    seasonal_naive_test = regression_and_classification_metrics(
-        test_frame["target_next_hour"],
-        seasonal_test_pred,
-        config["thresholds"],
+    seasonal_test = regression_and_classification_metrics(
+        test_frame["target_next_hour"], seasonal_test_pred, config["thresholds"]
     )
 
-    candidate_ml_test["mase"] = compute_mase(
-        test_frame["target_next_hour"], candidate_ml_pred, pers_test_pred
+    model_test["mase"] = compute_mase(
+        test_frame["target_next_hour"], model_test_pred, persistence_test_pred
     )
-    candidate_ml_test["skill_score_vs_persistence"] = compute_skill_score(
-        test_frame["target_next_hour"], candidate_ml_pred, pers_test_pred
+    model_test["skill_score_vs_persistence"] = compute_skill_score(
+        test_frame["target_next_hour"], model_test_pred, persistence_test_pred
     )
     persistence_test["mase"] = 1.0
     persistence_test["skill_score_vs_persistence"] = 0.0
-    seasonal_naive_test["mase"] = compute_mase(
-        test_frame["target_next_hour"], seasonal_test_pred, pers_test_pred
+    seasonal_test["mase"] = compute_mase(
+        test_frame["target_next_hour"], seasonal_test_pred, persistence_test_pred
     )
-    seasonal_naive_test["skill_score_vs_persistence"] = compute_skill_score(
-        test_frame["target_next_hour"], seasonal_test_pred, pers_test_pred
-    )
-
-    # Model status and serving champion resolution
-    is_smoke = bool("sample" in str(data_path).lower() or "synthetic" in str(data_path).lower())
-    statuses = resolve_model_statuses(
-        candidate_champion=candidate_champion,
-        passes_quality_gate=quality_gate["passes_baseline"],
-        smoke_only=is_smoke,
+    seasonal_test["skill_score_vs_persistence"] = compute_skill_score(
+        test_frame["target_next_hour"], seasonal_test_pred, persistence_test_pred
     )
 
-    serving_champion = candidate_champion if quality_gate["passes_baseline"] else "persistence"
-    serving_residual_q = ml_residual_q if quality_gate["passes_baseline"] else pers_residual_q
-    serving_station_q90 = ml_station_q90 if quality_gate["passes_baseline"] else pers_station_q90
-    serving_champion_pred = candidate_ml_pred if quality_gate["passes_baseline"] else pers_test_pred
-    serving_champion_test = candidate_ml_test.copy() if quality_gate["passes_baseline"] else persistence_test.copy()
+    if forecast_strategy == "persistence":
+        selected_prediction = persistence_test_pred
+        selected_test = persistence_test.copy()
+        selected_global_q = persistence_global_q
+        selected_station_q = persistence_station_q
+    else:
+        selected_prediction = model_test_pred
+        selected_test = model_test.copy()
+        selected_global_q = model_global_q
+        selected_station_q = model_station_q
 
-    # Conformal test interval evaluation
-    test_quantiles = test_frame[station].map(serving_station_q90).fillna(serving_residual_q).to_numpy()
-    test_lower = np.maximum(0.0, serving_champion_pred - test_quantiles)
-    test_upper = serving_champion_pred + test_quantiles
-    conformal_test_metrics = conformal_interval_metrics(
+    test_quantiles = (
+        test_frame[station]
+        .map(selected_station_q)
+        .fillna(selected_global_q)
+        .to_numpy()
+    )
+    test_lower = np.maximum(0.0, selected_prediction - test_quantiles)
+    test_upper = selected_prediction + test_quantiles
+    conformal_test = conformal_interval_metrics(
         test_frame["target_next_hour"], test_lower, test_upper
     )
-    serving_champion_test["conformal_interval"] = conformal_test_metrics
-
-    station_metrics = metrics_by_station(
+    selected_test["conformal_interval"] = conformal_test
+    selected_station_metrics = metrics_by_station(
         test_frame,
-        serving_champion_pred,
+        selected_prediction,
         station,
         config["thresholds"],
         conformal_residual_q90={
-            str(key): serving_station_q90.get(str(key), serving_residual_q)
+            str(key): selected_station_q.get(str(key), selected_global_q)
             for key in test_frame[station].unique()
         },
     )
     sliced_errors = sliced_error_analysis(
         test_frame,
-        serving_champion_pred,
+        selected_prediction,
         config["thresholds"],
         timestamp_column=timestamp,
         station_column=station,
     )
 
-    model_version = generate_model_version(data_path)
-    trained_stations = sorted(train_frame[station].unique().tolist())
-
-    forecast_context = ForecastContext(
-        horizon_hours=1,
-        frequency="1h",
-        timezone="Asia/Ho_Chi_Minh",
-        required_history_hours=25,
-        allowed_gap_hours=6,
-        feature_schema_version="2.0",
-    )
-
+    dataset_scope = "sample" if "sample" in str(data_path).lower() else "external"
+    trained_stations = sorted(train_frame[station].astype(str).unique().tolist())
     evaluation = {
         "data_audit": audit_air_quality(raw, config),
         "split_manifest": split_manifest,
         "baselines": {
             "persistence": persistence_test,
-            "seasonal_naive_24h": seasonal_naive_test,
+            "seasonal_naive_24h": seasonal_test,
         },
         "backtest": backtest,
         "calibration": {
-            "ml_metrics": cal_ml_metrics,
-            "persistence_metrics": cal_pers_metrics,
-            "ml_residual_quantile": ml_residual_q,
-            "persistence_residual_quantile": pers_residual_q,
-            "ml_residual_quantile_90": ml_residual_q,
-            "persistence_residual_quantile_90": pers_residual_q,
-            "calibration_rows": int(len(cal_frame)),
+            "model_metrics": model_cal_metrics,
+            "persistence_metrics": persistence_cal_metrics,
+            "model_residual_quantile": model_global_q,
+            "persistence_residual_quantile": persistence_global_q,
+            "calibration_rows": int(len(calibration_frame)),
             "calibration_window": [
-                str(cal_frame[timestamp].min()),
-                str(cal_frame[timestamp].max()),
+                str(calibration_frame[timestamp].min()),
+                str(calibration_frame[timestamp].max()),
             ],
             "conformal_quantile_method": "finite_sample_split_conformal",
             "coverage_target": coverage_target,
-            "calibration_picp": cal_picp,
+            "calibration_picp": calibration_picp,
         },
-        "candidate_ml_test": candidate_ml_test,
+        "model_test": model_test,
         "persistence_test": persistence_test,
-        "seasonal_naive_test": seasonal_naive_test,
-        "serving_champion": serving_champion,
-        "serving_champion_test": serving_champion_test,
-        "champion_test": serving_champion_test,
-        "conformal_test_evaluation": conformal_test_metrics,
-        "quality_gate": quality_gate,
-        "metrics_by_station": station_metrics,
+        "seasonal_naive_test": seasonal_test,
+        "selected_strategy_test": selected_test,
+        "conformal_test_evaluation": conformal_test,
+        "model_selection": model_selection,
+        "metrics_by_station": selected_station_metrics,
         "sliced_error_analysis": sliced_errors,
     }
 
     metadata = {
-        "model_version": model_version,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "model_name": candidate_champion,
-        "serving_champion": serving_champion,
-        "serving_strategy": statuses["serving_strategy"],
-        "candidate_champion": statuses["candidate_champion"],
-        "calibration_gate": statuses["calibration_gate"],
-        "production_readiness": statuses["production_readiness"],
+        "best_cv_model": best_cv_model,
+        "forecast_strategy": forecast_strategy,
+        "dataset_scope": dataset_scope,
         "trained_stations": trained_stations,
         "prediction_interval": {
             "method": "split_conformal_prediction_interval",
-            "residual_quantile": round(serving_residual_q, 4),
-            "global_q90": round(serving_residual_q, 4),
-            "station_q90": {key: round(value, 4) for key, value in serving_station_q90.items()},
+            "residual_quantile": round(float(selected_global_q), 4),
+            "global_q90": round(float(selected_global_q), 4),
+            "station_q90": {key: round(value, 4) for key, value in selected_station_q.items()},
             "coverage_target": coverage_target,
             "finite_sample_corrected": True,
         },
-        "features": columns,
+        "features": feature_columns,
+        "input_policy": {
+            "required_history_hours": int(
+                config.get("serving", {}).get("required_history_hours", 25)
+            ),
+            "allowed_gap_hours": int(config.get("serving", {}).get("allowed_gap_hours", 6)),
+        },
         "data_provenance": {
-            "dataset_snapshot_id": config["data"].get("snapshot_id", data_path.stem),
+            "source_file": str(data_path),
             "data_sha256": sha256_file(data_path),
             "rows_raw": int(len(raw)),
             "rows_train": int(len(train_frame)),
-            "rows_calibration": int(len(cal_frame)),
+            "rows_calibration": int(len(calibration_frame)),
             "rows_test": int(len(test_frame)),
-            "smoke_only": is_smoke,
             "storage_timezone": "UTC",
-            "calendar_timezone": config["data"].get("calendar_timezone", "Asia/Ho_Chi_Minh"),
+            "calendar_timezone": config["data"].get(
+                "calendar_timezone", "Asia/Ho_Chi_Minh"
+            ),
         },
     }
 
     if persist_artifacts:
         save_artifacts(
-            pipeline=pipeline,
+            pipeline=model_pipeline,
             metadata=metadata,
             evaluation=evaluation,
             config=config,
-            split_manifest=split_manifest,
-            forecast_context=forecast_context,
         )
 
     return {
-        "pipeline": pipeline,
+        "pipeline": model_pipeline,
         "metadata": metadata,
         "evaluation": evaluation,
-        "metrics": serving_champion_test,
-        "candidate_champion": candidate_champion,
-        "serving_champion": serving_champion,
+        "metrics": selected_test,
+        "best_cv_model": best_cv_model,
+        "forecast_strategy": forecast_strategy,
         "prediction_interval": metadata["prediction_interval"],
     }
 
 
 def main() -> None:
-    """CLI entry point for master pipeline."""
-    # Đảm bảo CLI in được tên trạm và thông báo tiếng Việt trên Windows.
+    """CLI canonical của dự án."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Leakage-Safe Next-Hour PM2.5 Master Pipeline")
+    parser = argparse.ArgumentParser(description="HCMC PM2.5 next-hour forecasting")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # train command
-    train_parser = subparsers.add_parser("train", help="Run full training, backtest, and artifact freezing")
-    train_parser.add_argument("--config", default="configs/config.yaml", help="Path to config.yaml")
-    train_parser.add_argument("--no-artifacts", action="store_true", help="Do not save artifacts")
+    train_parser = subparsers.add_parser("train", help="Huấn luyện và đánh giá theo thời gian")
+    train_parser.add_argument("--config", default="configs/config.yaml")
+    train_parser.add_argument("--no-artifacts", action="store_true")
 
-    # predict command
-    predict_parser = subparsers.add_parser("predict", help="Predict PM2.5 from input CSV")
-    predict_parser.add_argument("--artifact-dir", default="artifacts", help="Path to artifact bundle directory")
-    predict_parser.add_argument("--input", required=True, help="Path to CSV containing observations")
+    predict_parser = subparsers.add_parser("predict", help="Dự báo từ một CSV history")
+    predict_parser.add_argument("--artifact-dir", default="artifacts")
+    predict_parser.add_argument("--input", required=True)
 
     args = parser.parse_args()
-
     if args.command == "train":
-        result = run_train_pipeline(
-            config_path=args.config,
-            persist_artifacts=not args.no_artifacts,
+        result = run_train_pipeline(args.config, persist_artifacts=not args.no_artifacts)
+        print(
+            "Pipeline hoàn tất: "
+            f"best_cv_model={result['best_cv_model']}, "
+            f"forecast_strategy={result['forecast_strategy']}"
         )
-        print(f"Pipeline finished successfully. Serving champion: {result['serving_champion']}")
-        print(f"Production readiness: {result['metadata']['production_readiness']}")
-        print(f"Calibration gate: {result['metadata']['calibration_gate']}")
-
-    elif args.command == "predict":
+    else:
         predictor = Predictor.from_artifact(args.artifact_dir)
-        df = pd.read_csv(args.input)
-        res = predictor.predict(df)
-        print(json.dumps(res, ensure_ascii=False, indent=2))
+        result = predictor.predict(pd.read_csv(args.input))
+        print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

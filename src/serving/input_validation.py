@@ -1,4 +1,4 @@
-"""Quality gate cho dữ liệu tại thời điểm serving."""
+"""Kiểm tra history runtime trước khi tạo dự báo."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 
-def audit_runtime_history(
+def check_forecast_input(
     frame: pd.DataFrame,
     *,
     timestamp_column: str,
@@ -16,21 +16,21 @@ def audit_runtime_history(
     allowed_gap_hours: int,
     exogenous_columns: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Đánh giá history hiện tại trước khi chọn ML hay persistence.
+    """Trả về cảnh báo dữ liệu và cho biết có nên dùng Persistence hay không.
 
-    ``GOOD`` cho phép dùng model. ``DEGRADED`` vẫn có thể dự báo nhưng kèm
-    cảnh báo; nếu khoảng trống vượt policy thì predictor sẽ dùng persistence.
-    ``UNUSABLE`` không có đủ dữ liệu hoặc thiếu PM2.5 hiện tại.
+    History thiếu PM2.5 hiện tại hoặc thiếu số giờ tối thiểu là không hợp lệ.
+    History có gap lớn vẫn được nhận để demo, nhưng dùng Persistence nhằm
+    tránh đưa dữ liệu lệch phân phối vào model ML.
     """
     exogenous_columns = exogenous_columns or []
     if frame.empty:
         return {
-            "status": "UNUSABLE",
+            "status": "invalid",
             "history_completeness": 0.0,
-            "missing_lag_count": required_history_hours,
+            "missing_target_count": required_history_hours,
             "missing_exogenous_count": 0,
             "largest_gap_hours": None,
-            "fallback_required": True,
+            "use_persistence": True,
             "warnings": ["history_empty"],
         }
 
@@ -54,6 +54,7 @@ def audit_runtime_history(
         int(recent[existing_exogenous].isna().sum().sum()) if existing_exogenous else 0
     )
     missing_exogenous += len(exogenous_columns) - len(existing_exogenous)
+
     current_available = bool(pd.notna(target.iloc[-1]))
     warnings: list[str] = []
     if missing_target:
@@ -63,20 +64,18 @@ def audit_runtime_history(
     if largest_gap is not None and largest_gap > allowed_gap_hours:
         warnings.append("gap_exceeds_allowed_policy")
 
-    unusable = len(frame) < required_history_hours or not current_available
-    degraded = (
-        not unusable
-        and (missing_target > 0 or missing_exogenous > 0 or bool(warnings))
-    )
-    status = "UNUSABLE" if unusable else "DEGRADED" if degraded else "GOOD"
+    invalid = len(frame) < required_history_hours or not current_available
+    degraded = not invalid and bool(warnings)
     return {
-        "status": status,
+        "status": "invalid" if invalid else "warning" if degraded else "valid",
         "history_completeness": round(completeness, 4),
-        "missing_lag_count": missing_target,
+        "missing_target_count": missing_target,
         "missing_exogenous_count": missing_exogenous,
         "largest_gap_hours": largest_gap,
-        "fallback_required": bool(
-            unusable or (largest_gap is not None and largest_gap > allowed_gap_hours)
+        "use_persistence": bool(
+            invalid
+            or missing_exogenous > 0
+            or (largest_gap is not None and largest_gap > allowed_gap_hours)
         ),
         "warnings": warnings,
     }

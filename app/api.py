@@ -1,15 +1,8 @@
-"""FastAPI serving layer for the PM2.5 forecast service.
+"""FastAPI endpoint cho dự báo PM2.5 một giờ tiếp theo."""
 
-P0 changes (2026-09-06):
-* P0.4 — the predictor is built via ``Predictor.from_artifact`` which reads
-  the model bundle from a versioned directory (default ``artifacts/``). The
-  active version is resolved through ``active_release.json`` (with
-  ``production.json`` kept as a compatibility fallback, or
-  ``PM25_ARTIFACT_DIR`` env var). The legacy direct-load path is preserved
-  via ``Predictor(load_config(...))`` for local development only.
-* P0.6 — readiness fields are surfaced through ``/health`` and ``/predict``.
-"""
+from __future__ import annotations
 
+import os
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -20,18 +13,17 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.data.loader import load_air_quality
-from src.predict import Predictor
+from src.serving.predictor import Predictor
 
 DEFAULT_ARTIFACT_ROOT = Path("artifacts")
 
 
 class Observation(BaseModel):
-    """Một quan trắc đầu vào của trạm với ràng buộc miền giá trị hợp lệ."""
+    """Một quan trắc đầu vào theo schema của sample CSV."""
 
     timestamp: datetime
-    # station giữ lại để tương thích payload cũ; station_id là tên canonical.
-    station: str | None = Field(default=None, min_length=1, max_length=100)
-    station_id: str | None = Field(default=None, min_length=1, max_length=100)
+    available_at: datetime | None = None
+    station_id: str = Field(min_length=1, max_length=100)
     PM25: float = Field(alias="PM2.5", ge=0, le=1000)
     TSP: float | None = Field(default=None, ge=0)
     NO2: float | None = Field(default=None, ge=0)
@@ -43,19 +35,15 @@ class Observation(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    def model_post_init(self, __context: object) -> None:
-        if not self.station and not self.station_id:
-            raise ValueError("Phải cung cấp station_id (hoặc station ở API legacy).")
-
 
 class PredictionRequest(BaseModel):
-    """Chuỗi quan trắc dùng để tạo lag và dự báo (tối thiểu 25, tối đa 168 giờ)."""
+    """History một trạm dùng để tạo đặc trưng và dự báo."""
 
     observations: list[Observation] = Field(min_length=25, max_length=168)
 
 
 class Interval(BaseModel):
-    """Khoảng dự báo Conformal Interval."""
+    """Khoảng dự báo split-conformal."""
 
     method: str = "split_conformal_prediction_interval"
     coverage_target: float = Field(default=0.9, ge=0.0, le=1.0)
@@ -66,7 +54,7 @@ class Interval(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    """Cấu trúc phản hồi chuẩn hóa của endpoint dự báo."""
+    """Schema phản hồi của endpoint dự báo."""
 
     station: str
     station_id: str | None = None
@@ -75,103 +63,58 @@ class PredictionResponse(BaseModel):
     current_pm25: float
     predicted_pm25: float
     level: str
-    forecast_strategy: str = "ml_model"
-    serving_champion: str | None = None
+    forecast_strategy: str
+    best_cv_model: str | None = None
+    dataset_scope: str = "sample"
     is_out_of_distribution: bool = False
     interval: Interval
-    model_version: str
     updated_at: str
-    production_readiness: str = "unknown"
-    calibration_gate: str = "unknown"
     data_quality: dict[str, object] = Field(default_factory=dict)
 
 
-class ErrorResponse(BaseModel):
-    """Cấu trúc phản hồi lỗi chuẩn hóa."""
-
-    code: str
-    message: str
-
-
 def _resolve_artifact_root() -> Path:
-    """Return the directory that holds the versioned artifact bundle.
-
-    Resolution order:
-    1. ``PM25_ARTIFACT_DIR`` environment variable;
-    2. ``./artifacts`` (default working-tree location).
-
-    The active version inside that directory is selected by
-    ``Predictor.from_artifact`` via ``active_release.json``.
-    """
-    env_value = __import__("os").environ.get("PM25_ARTIFACT_DIR")
-    if env_value:
-        return Path(env_value)
-    return DEFAULT_ARTIFACT_ROOT
+    """Lấy thư mục artifact từ biến môi trường hoặc mặc định của repo."""
+    return Path(os.environ.get("PM25_ARTIFACT_DIR", DEFAULT_ARTIFACT_ROOT))
 
 
 @lru_cache
 def get_predictor() -> Predictor:
-    """Nạp predictor một lần và tái sử dụng giữa các request (P0.4).
-
-    The predictor is built from a self-contained artifact bundle. The
-    legacy ``Predictor(load_config(...))`` path is intentionally NOT used
-    here because it would couple the API to the working tree's
-    ``configs/config.yaml`` and reintroduce the training-serving skew that
-    P0.4 is meant to eliminate.
-    """
-    artifact_root = _resolve_artifact_root()
-    return Predictor.from_artifact(artifact_root)
+    """Nạp model một lần và tái sử dụng giữa các request."""
+    return Predictor.from_artifact(_resolve_artifact_root())
 
 
 app = FastAPI(
     title="API dự báo PM2.5 TP.HCM",
-    version="1.1.0",
-    description="Hệ thống dự báo nồng độ PM2.5 giờ tiếp theo không rò rỉ dữ liệu.",
+    version="1.0.0",
+    description="Dự báo nồng độ PM2.5 giờ tiếp theo từ history theo trạm.",
 )
 
 
 @app.get("/health")
-def health():
-    """Kiểm tra mô hình đã được nạp và sẵn sàng phục vụ."""
+def health() -> dict[str, object]:
+    """Kiểm tra model artifact hiện tại đã được nạp."""
     try:
         predictor = get_predictor()
         if predictor.model is None:
             raise ValueError("Model is None")
-        metadata = predictor.metadata or {}
         return {
             "status": "ready",
             "model_loaded": True,
-            "model_version": metadata.get("model_version"),
-            "production_readiness": metadata.get("production_readiness", "unknown"),
-            "calibration_gate": metadata.get("calibration_gate", "unknown"),
+            "best_cv_model": predictor.metadata.get("best_cv_model"),
+            "forecast_strategy": predictor.metadata.get("forecast_strategy"),
+            "dataset_scope": predictor.metadata.get("dataset_scope", "sample"),
         }
     except Exception as err:
-        raise HTTPException(
-            status_code=503,
-            detail="Mô hình chưa sẵn sàng.",
-        ) from err
+        raise HTTPException(status_code=503, detail="Mô hình chưa sẵn sàng.") from err
 
 
 @app.post("/predict", response_model=PredictionResponse)
 @app.post("/v1/predict/raw", response_model=PredictionResponse)
 def predict(request: PredictionRequest):
-    """Endpoint debug nhận raw history; API chính nằm ở /v1/stations/{station_id}/forecast."""
+    """Dự báo từ history raw gửi trong request."""
     try:
         records = [item.model_dump(by_alias=True) for item in request.observations]
-        # Chuẩn hóa alias theo config của artifact, tránh station/station_id
-        # bị lệch giữa payload và model bundle.
-        predictor = get_predictor()
-        predictor_config = getattr(predictor, "config", {}) or {}
-        station_column = predictor_config.get("data", {}).get("station_column", "station")
-        for rec in records:
-            station_value = rec.get("station_id") or rec.get("station")
-            rec[station_column] = station_value
-            rec["station_id"] = station_value
-        # Chuyển timestamp datetime thành chuỗi ISO để pandas parser nhất quán
-        for rec in records:
-            if isinstance(rec.get("timestamp"), datetime):
-                rec["timestamp"] = rec["timestamp"].isoformat()
-        return predictor.predict(pd.DataFrame(records))
+        return get_predictor().predict(pd.DataFrame(records))
     except ValueError as error:
         return JSONResponse(
             status_code=400,
@@ -180,7 +123,7 @@ def predict(request: PredictionRequest):
     except FileNotFoundError:
         return JSONResponse(
             status_code=503,
-            content={"code": "MODEL_UNAVAILABLE", "message": "Mô hình hoặc artifact chưa sẵn sàng."},
+            content={"code": "MODEL_UNAVAILABLE", "message": "Model artifact chưa sẵn sàng."},
         )
     except Exception:
         return JSONResponse(
@@ -191,7 +134,7 @@ def predict(request: PredictionRequest):
 
 @app.get("/v1/stations/{station_id}/forecast", response_model=PredictionResponse)
 def forecast_station(station_id: str):
-    """API chính: backend tự lấy history gần nhất thay vì bắt client upload 25 dòng."""
+    """Lấy 168 giờ gần nhất của một trạm từ CSV rồi dự báo."""
     try:
         predictor = get_predictor()
         config = predictor.config

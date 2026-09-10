@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from src.data import audit_air_quality, validate_config, validate_schema
+from src.data.loader import load_air_quality
 
 CONFIG = {
     "project": {"random_state": 42},
@@ -38,6 +39,26 @@ def test_data_audit_detects_duplicates_and_gaps():
     report = audit_air_quality(frame, CONFIG)
     assert report["duplicate_station_timestamps"] == 2
     assert report["irregular_hourly_gaps"] >= 1
+
+
+def test_loader_rejects_duplicate_station_timestamps(tmp_path):
+    path = tmp_path / "duplicate.csv"
+    pd.DataFrame(
+        {
+            "timestamp": ["2024-01-01 00:00", "2024-01-01 00:00"],
+            "station_id": ["A", "A"],
+            "PM2.5": [10.0, 11.0],
+        }
+    ).to_csv(path, index=False)
+    config = {"data": {
+        "path": str(path),
+        "timestamp_column": "timestamp",
+        "station_column": "station_id",
+        "target_column": "PM2.5",
+        "required_columns": ["timestamp", "station_id", "PM2.5"],
+    }}
+    with pytest.raises(ValueError, match="trùng"):
+        load_air_quality(config)
 
 
 def test_config_rejects_invalid_test_fraction():

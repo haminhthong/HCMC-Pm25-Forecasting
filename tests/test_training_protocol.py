@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from src.train import build_quality_gate, expanding_time_folds, split_by_time
+from src.forecasting.selection import select_forecast_strategy
+from src.validation.backtest import expanding_time_folds
+from src.validation.split import split_by_time
 
 
 def test_expanding_folds_never_train_on_future():
@@ -21,6 +23,24 @@ def test_expanding_folds_never_train_on_future():
         assert len(set(train_indices) & set(validation_indices)) == 0
 
 
+def test_expanding_folds_keep_target_inside_validation_window():
+    timestamps = pd.date_range("2024-01-01", periods=12, freq="h")
+    frame = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "target_timestamp": timestamps + pd.Timedelta(hours=1),
+        }
+    )
+    _, validation_indices = expanding_time_folds(
+        frame,
+        "timestamp",
+        folds=2,
+        minimum_train_periods=6,
+    )[0]
+    validation = frame.iloc[validation_indices]
+    assert (validation["target_timestamp"] <= timestamps[8]).all()
+
+
 def test_time_split_preserves_order():
     frame = pd.DataFrame(
         {
@@ -37,15 +57,14 @@ def test_time_split_preserves_order():
     assert test_frame.groupby("timestamp")["station"].nunique().eq(2).all()
 
 
-def test_quality_gate_requires_model_to_beat_persistence():
+def test_model_selection_requires_model_to_beat_persistence():
     cfg = {
-        "quality_gate": {
+        "model_selection": {
             "minimum_mae_improvement": 0.05,
-            "minimum_high_pm25_recall": 0.75,
-            "maximum_rolling_mae_std": 1.0,
+            "maximum_cv_mae_std": 1.0,
         }
     }
-    passed = build_quality_gate({"mae": 1.0, "high_pm25_recall": 0.8}, {"mae": 2.0}, 0.5, cfg)
-    failed = build_quality_gate({"mae": 1.98, "high_pm25_recall": 0.6}, {"mae": 2.0}, 0.5, cfg)
-    assert passed["passes_baseline"] is True
-    assert failed["passes_baseline"] is False
+    passed = select_forecast_strategy("ridge", {"mae": 1.0}, {"mae": 2.0}, 0.5, cfg)
+    failed = select_forecast_strategy("ridge", {"mae": 1.98}, {"mae": 2.0}, 0.5, cfg)
+    assert passed["forecast_strategy"] == "ridge"
+    assert failed["forecast_strategy"] == "persistence"

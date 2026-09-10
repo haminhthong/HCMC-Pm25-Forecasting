@@ -9,8 +9,8 @@ Bao gồm 12 ca kiểm thử bắt buộc:
 6. test_test_never_used_for_model_selection
 7. test_seasonal_naive_same_hour_previous_day
 8. test_persistence_baseline
-9. test_quality_gate_fallback_to_persistence
-10. test_serving_champion_test_metrics_match_policy
+9. test_model_selection_fallback_to_persistence
+10. test_selected_strategy_test_metrics_match_policy
 11. test_conformal_interval_uses_correct_champion_residuals
 12. test_train_and_inference_feature_columns_match
 """
@@ -19,18 +19,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.evaluate import (
-    persistence_predictions,
-    seasonal_naive_predictions,
-)
 from src.features import build_features, model_feature_columns
-from src.train import (
-    build_quality_gate,
-    expanding_time_folds,
-    make_pipeline,
-    split_by_time,
-    train,
-)
+from src.forecasting.baselines import persistence_predictions, seasonal_naive_predictions
+from src.forecasting.selection import select_forecast_strategy
+from src.forecasting.trainer import make_pipeline
+from src.pipeline import run_train_pipeline
+from src.validation.backtest import expanding_time_folds
+from src.validation.split import split_by_time
 
 CONFIG = {
     "project": {"random_state": 42},
@@ -62,10 +57,9 @@ CONFIG = {
         "medium_max": 35.5,
         "labels": ["Thấp", "Trung bình", "Cao"],
     },
-    "quality_gate": {
+    "model_selection": {
         "minimum_mae_improvement": 0.05,
-        "minimum_high_pm25_recall": 0.75,
-        "maximum_rolling_mae_std": 1.0,
+        "maximum_cv_mae_std": 1.0,
     },
     "artifacts": {
         "directory": "artifacts",
@@ -169,11 +163,11 @@ def test_calibration_before_test():
 
 def test_test_never_used_for_model_selection():
     """6. Xác nhận tập Test hoàn toàn độc lập và không được sử dụng để chọn candidate model."""
-    result = train("configs/config.yaml", persist_artifacts=False)
+    result = run_train_pipeline("configs/config.yaml", persist_artifacts=False)
     # Lựa chọn candidate model dựa trên backtest trên tập train
     backtest = result["evaluation"]["backtest"]
     selected_name = min(backtest, key=lambda n: backtest[n]["mae_mean"])
-    assert result["candidate_champion"] == selected_name
+    assert result["best_cv_model"] == selected_name
 
 
 def test_seasonal_naive_same_hour_previous_day():
@@ -212,56 +206,55 @@ def test_persistence_baseline():
     np.testing.assert_allclose(preds, [12.5, 18.2, 22.0])
 
 
-def test_quality_gate_fallback_to_persistence():
-    """9. Kiểm tra Quality Gate kích hoạt fallback về persistence khi mô hình không vượt baseline."""
+def test_model_selection_fallback_to_persistence():
+    """9. Model không vượt Persistence thì chiến lược được chọn là Persistence."""
     cfg = {
-        "quality_gate": {
+        "model_selection": {
             "minimum_mae_improvement": 0.05,
-            "minimum_high_pm25_recall": 0.75,
-            "maximum_rolling_mae_std": 1.0,
+            "maximum_cv_mae_std": 1.0,
         }
     }
-    # Trường hợp mô hình có MAE kém hơn hoặc cải thiện < 5%
-    gate = build_quality_gate(
-        champion_metrics={"mae": 10.0, "high_pm25_recall": 0.5},
+    selection = select_forecast_strategy(
+        "ridge",
+        model_metrics={"mae": 10.0},
         persistence_metrics={"mae": 10.0},
-        champion_mae_std=0.2,
+        cv_mae_std=0.2,
         config=cfg,
     )
-    assert gate["passes_baseline"] is False
-    assert gate["status"] == "không đạt"
+    assert selection["forecast_strategy"] == "persistence"
+    assert selection["status"] == "persistence"
 
 
-def test_serving_champion_test_metrics_match_policy():
-    """10. Đảm bảo serving_champion_test trong evaluation phản ánh đúng policy (P0 fix)."""
-    result = train("configs/config.yaml", persist_artifacts=False)
+def test_selected_strategy_test_metrics_match_policy():
+    """10. Kết quả selected_strategy_test phải khớp chiến lược đã chọn."""
+    result = run_train_pipeline("configs/config.yaml", persist_artifacts=False)
     evaluation = result["evaluation"]
-    serving_champion = evaluation["serving_champion"]
+    strategy = result["forecast_strategy"]
 
-    if serving_champion == "persistence":
-        assert evaluation["serving_champion_test"]["mae"] == pytest.approx(
+    if strategy == "persistence":
+        assert evaluation["selected_strategy_test"]["mae"] == pytest.approx(
             evaluation["persistence_test"]["mae"]
         )
     else:
-        assert evaluation["serving_champion_test"]["mae"] == pytest.approx(
-            evaluation["candidate_ml_test"]["mae"]
+        assert evaluation["selected_strategy_test"]["mae"] == pytest.approx(
+            evaluation["model_test"]["mae"]
         )
 
 
-def test_conformal_interval_uses_correct_champion_residuals():
-    """11. Kiểm tra Conformal Interval sử dụng đúng residual quantile của serving champion."""
-    result = train("configs/config.yaml", persist_artifacts=False)
+def test_conformal_interval_uses_correct_strategy_residuals():
+    """11. Interval dùng đúng residual quantile của chiến lược được chọn."""
+    result = run_train_pipeline("configs/config.yaml", persist_artifacts=False)
     interval_info = result["prediction_interval"]
-    serving_champion = result["serving_champion"]
+    strategy = result["forecast_strategy"]
     cal = result["evaluation"]["calibration"]
 
-    if serving_champion == "persistence":
+    if strategy == "persistence":
         assert interval_info["residual_quantile"] == pytest.approx(
-            round(cal["persistence_residual_quantile_90"], 4)
+            round(cal["persistence_residual_quantile"], 4)
         )
     else:
         assert interval_info["residual_quantile"] == pytest.approx(
-            round(cal["ml_residual_quantile_90"], 4)
+            round(cal["model_residual_quantile"], 4)
         )
 
 

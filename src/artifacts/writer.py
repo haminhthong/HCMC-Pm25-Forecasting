@@ -1,17 +1,13 @@
-"""Versioned artifact writing and production pointer management."""
+"""Ghi bộ artifact hiện tại của prototype."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import joblib
-import yaml
 from sklearn.pipeline import Pipeline
-
-from src.artifacts.schema import ForecastContext
 
 
 def save_artifacts(
@@ -19,105 +15,40 @@ def save_artifacts(
     metadata: dict[str, Any],
     evaluation: dict[str, Any],
     config: dict[str, Any],
-    split_manifest: dict[str, Any] | None = None,
-    forecast_context: ForecastContext | None = None,
 ) -> Path:
-    """Lưu model, metadata, schema, config snapshot, split manifest và evaluation."""
-    artifact_root = Path(config["artifacts"]["directory"])
+    """Ghi model, metadata, evaluation và schema vào một thư mục cố định.
+
+    Prototype chỉ giữ bộ artifact hiện tại. Provenance và kết quả split nằm
+    trong JSON; cấu hình gốc vẫn được đọc từ ``configs/config.yaml``.
+    """
+    artifact_cfg = config["artifacts"]
+    artifact_root = Path(artifact_cfg["directory"])
     artifact_root.mkdir(parents=True, exist_ok=True)
 
-    versioned = config["artifacts"].get("versioned", True)
-    model_version = metadata.get("model_version") or "latest"
-    version_dir = artifact_root / "models" / model_version if versioned else artifact_root
-    version_dir.mkdir(parents=True, exist_ok=True)
-
-    model_path = version_dir / config["artifacts"]["model_file"]
-    evaluation_path = version_dir / config["artifacts"]["evaluation_file"]
-    metadata_path = version_dir / config["artifacts"]["metadata_file"]
-    schema_file = config["artifacts"].get("feature_schema_file", "feature_schema.json")
-    schema_path = version_dir / schema_file
-    config_snapshot_file = config["artifacts"].get("config_snapshot_file", "config_snapshot.yaml")
-    config_snapshot_path = version_dir / config_snapshot_file
-    split_manifest_path = version_dir / "split_manifest.json"
-
-    # Embed ForecastContext in metadata if provided
-    if forecast_context is not None:
-        metadata["forecast_context"] = forecast_context.to_dict()
+    model_path = artifact_root / artifact_cfg.get("model_file", "model.joblib")
+    metadata_path = artifact_root / artifact_cfg.get("metadata_file", "metadata.json")
+    evaluation_path = artifact_root / artifact_cfg.get("evaluation_file", "evaluation.json")
+    schema_path = artifact_root / artifact_cfg.get("feature_schema_file", "feature_schema.json")
 
     joblib.dump(pipeline, model_path)
-    evaluation_path.write_text(
-        json.dumps(evaluation, ensure_ascii=False, indent=2, allow_nan=False),
-        encoding="utf-8",
-    )
+    _write_json(metadata_path, metadata)
+    _write_json(evaluation_path, evaluation)
 
+    feature_columns = list(metadata.get("features", []))
     feature_schema = {
-        "target_column": config["data"]["target_column"],
-        "station_column": config["data"]["station_column"],
         "timestamp_column": config["data"]["timestamp_column"],
-        "model_feature_columns": metadata.get("features", []),
-        "feature_count": len(metadata.get("features", [])),
-        "schema_version": 2,
+        "station_column": config["data"]["station_column"],
+        "target_column": config["data"]["target_column"],
+        "model_feature_columns": feature_columns,
+        "feature_count": len(feature_columns),
     }
-    schema_path.write_text(
-        json.dumps(feature_schema, ensure_ascii=False, indent=2),
+    _write_json(schema_path, feature_schema)
+    return artifact_root
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    """Ghi JSON UTF-8 và từ chối NaN để artifact luôn đọc được."""
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False),
         encoding="utf-8",
     )
-
-    with config_snapshot_path.open("w", encoding="utf-8") as file:
-        yaml.safe_dump(config, file, allow_unicode=True)
-
-    if split_manifest is not None:
-        split_manifest_path.write_text(
-            json.dumps(split_manifest, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-    # Chỉ lưu đường dẫn tương đối để artifact không phụ thuộc máy cá nhân.
-    relative_version_dir = Path(artifact_root.name) / "models" / model_version
-    relative_model_path = relative_version_dir / config["artifacts"]["model_file"]
-
-    # Pointer to active version in active_release.json/production.json
-    production_pointer = artifact_root / "active_release.json"
-    production_payload = {
-        "active_version": model_version if versioned else ".",
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "production_readiness": metadata.get("production_readiness", "unknown"),
-        "calibration_gate": metadata.get("calibration_gate", "unknown"),
-        "artifact_relative_path": relative_model_path.as_posix(),
-        "version_dir": relative_version_dir.as_posix(),
-    }
-    production_pointer.write_text(
-        json.dumps(production_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    # Ghi pointer cũ để các deployment chưa nâng cấp vẫn đọc được release.
-    (artifact_root / "production.json").write_text(
-        json.dumps(production_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    metadata["artifact_relative_path"] = relative_version_dir.as_posix()
-    metadata_path.write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
-        encoding="utf-8",
-    )
-
-    # Legacy flat layout mirrors for backward compatibility if configured.
-    if versioned and config["artifacts"].get("mirror_flat_legacy", True):
-        joblib.dump(pipeline, artifact_root / config["artifacts"]["model_file"])
-        (artifact_root / config["artifacts"]["metadata_file"]).write_text(
-            json.dumps(metadata, ensure_ascii=False, indent=2, allow_nan=False),
-            encoding="utf-8",
-        )
-        (artifact_root / schema_file).write_text(
-            json.dumps(feature_schema, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        (artifact_root / config["artifacts"]["evaluation_file"]).write_text(
-            json.dumps(evaluation, ensure_ascii=False, indent=2, allow_nan=False),
-            encoding="utf-8",
-        )
-        with (artifact_root / config_snapshot_file).open("w", encoding="utf-8") as file:
-            yaml.safe_dump(config, file, allow_unicode=True)
-
-    return version_dir

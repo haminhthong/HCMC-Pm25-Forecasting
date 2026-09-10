@@ -9,7 +9,11 @@ import numpy as np
 import pandas as pd
 
 from src.data.quality import validate_schema
-from src.data.schema import DEFAULT_SOURCE_TIMEZONE, normalize_timestamp_series
+from src.data.schema import (
+    DEFAULT_SOURCE_TIMEZONE,
+    PHYSICAL_RANGES,
+    normalize_timestamp_series,
+)
 
 
 def resolve_data_path(configured_path: str | Path) -> Path:
@@ -38,12 +42,7 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
     data_config = config["data"]
     path = resolve_data_path(data_config["path"])
     frame = pd.read_csv(path)
-    # Canonical v2 dùng station_id nhưng vẫn đọc được file legacy có cột station.
     station = data_config["station_column"]
-    if station not in frame.columns:
-        legacy_alias = "station" if station == "station_id" else "station_id"
-        if legacy_alias in frame.columns:
-            frame = frame.rename(columns={legacy_alias: station})
     validate_schema(frame, data_config["required_columns"])
 
     timestamp = data_config["timestamp_column"]
@@ -59,10 +58,13 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
     # Chuẩn hóa cả thời điểm phát hành để hợp đồng availability luôn so sánh
     # giữa hai chuỗi datetime cùng timezone, tránh lỗi mixed aware/naive.
     if "available_at" in frame.columns:
+        original_available = frame["available_at"].notna()
         frame["available_at"] = normalize_timestamp_series(
             frame["available_at"],
             source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
         )
+        if frame.loc[original_available, "available_at"].isna().any():
+            raise ValueError("Cột available_at chứa giá trị không hợp lệ.")
 
     numeric_columns = [
         data_config["target_column"],
@@ -73,8 +75,26 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
             frame[column] = pd.to_numeric(frame[column], errors="coerce")
 
     frame = frame.dropna(subset=[station]).copy()
+    frame[station] = frame[station].astype(str).str.strip()
+    if frame[station].eq("").any():
+        raise ValueError(f"Cột {station} không được chứa station_id rỗng.")
+    if frame.duplicated([station, timestamp]).any():
+        raise ValueError(
+            f"Dữ liệu chứa timestamp trùng sau khi chuẩn hóa station_id "
+            f"({station}, {timestamp})."
+        )
 
     if data_config.get("zero_as_missing", False):
         frame.loc[frame[target] == 0, target] = np.nan
+
+    if target in PHYSICAL_RANGES:
+        minimum, maximum = PHYSICAL_RANGES[target]
+        valid_target = frame[target].isna() | frame[target].between(minimum, maximum)
+        if not valid_target.all():
+            invalid_count = int((~valid_target).sum())
+            raise ValueError(
+                f"Cột {target} có {invalid_count} giá trị ngoài miền "
+                f"[{minimum}, {maximum}]."
+            )
 
     return frame

@@ -1,8 +1,0 @@
-{
-  "active_version": "pm25-20260907-739811d-301edb5",
-  "updated_at": "2026-09-07T15:44:58.642033+00:00",
-  "production_readiness": "smoke_test_only",
-  "calibration_gate": "pass",
-  "artifact_relative_path": "artifacts/models/pm25-20260907-739811d-301edb5/model.joblib",
-  "version_dir": "artifacts/models/pm25-20260907-739811d-301edb5"
-}

@@ -18,7 +18,7 @@ def test_api_returns_503_when_model_missing(monkeypatch):
 def test_api_rejects_oversized_payload():
     client = TestClient(api.app)
     dates = pd.date_range("2024-01-01", periods=200, freq="h").astype(str)
-    records = [{"timestamp": dates[i], "station": "A", "PM2.5": 10.0} for i in range(200)]
+    records = [{"timestamp": dates[i], "station_id": "A", "PM2.5": 10.0} for i in range(200)]
     response = client.post("/predict", json={"observations": records})
     assert response.status_code == 422
 
@@ -31,8 +31,9 @@ def test_api_prediction_response_schema(monkeypatch):
         "current_pm25": 32.1,
         "predicted_pm25": 34.7,
         "level": "Trung bình",
-        "forecast_strategy": "ml_model",
-        "serving_champion": "random_forest",
+        "forecast_strategy": "ridge",
+        "best_cv_model": "ridge",
+        "dataset_scope": "sample",
         "interval": {
             "method": "split_conformal",
             "coverage_target": 0.9,
@@ -41,9 +42,8 @@ def test_api_prediction_response_schema(monkeypatch):
             "upper": 40.1,
             "width": 10.9,
         },
-        "model_version": "2026-09-01-001",
         "updated_at": "2024-01-01T10:00:00Z",
-        "data_quality": {"status": "GOOD", "fallback_required": False},
+        "data_quality": {"status": "valid", "use_persistence": False},
     }
 
     class FakePredictor:
@@ -54,16 +54,16 @@ def test_api_prediction_response_schema(monkeypatch):
     client = TestClient(api.app)
 
     dates = pd.date_range("2024-01-01", periods=25, freq="h").astype(str)
-    payload = [{"timestamp": dates[i], "station": "Trạm A", "PM2.5": 30.0} for i in range(25)]
+    payload = [{"timestamp": dates[i], "station_id": "Trạm A", "PM2.5": 30.0} for i in range(25)]
     response = client.post("/predict", json={"observations": payload})
     assert response.status_code == 200, response.json()
     res = response.json()
     assert res["station"] == "Trạm A"
     assert res["predicted_pm25"] == 34.7
-    assert res["forecast_strategy"] == "ml_model"
+    assert res["forecast_strategy"] == "ridge"
     assert res["interval"]["coverage"] == 0.9
     assert res["interval"]["method"] == "split_conformal"
-    assert res["data_quality"]["status"] == "GOOD"
+    assert res["data_quality"]["status"] == "valid"
 
 
 def test_predict_returns_503_when_file_not_found(monkeypatch):
@@ -73,7 +73,7 @@ def test_predict_returns_503_when_file_not_found(monkeypatch):
     monkeypatch.setattr(api, "get_predictor", fake_get_predictor)
     client = TestClient(api.app)
     dates = pd.date_range("2024-01-01", periods=25, freq="h").astype(str)
-    payload = [{"timestamp": dates[i], "station": "Trạm A", "PM2.5": 30.0} for i in range(25)]
+    payload = [{"timestamp": dates[i], "station_id": "Trạm A", "PM2.5": 30.0} for i in range(25)]
     response = client.post("/predict", json={"observations": payload})
     assert response.status_code == 503
     assert response.json()["code"] == "MODEL_UNAVAILABLE"

@@ -20,4 +20,4 @@ jobs:
       - run: python -m pip check
       - run: python -m ruff check src app tests
       - run: python -m pytest
-      - run: python -m src.train --config configs/config.yaml --no-artifacts
+      - run: python -m src.pipeline train --config configs/config.yaml --no-artifacts

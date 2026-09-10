@@ -1,4 +1,4 @@
-"""Conformal Prediction utilities (P0.2: finite-sample split-conformal).
+"""Tiện ích split-conformal finite-sample.
 
 This module extracts conformal logic from ``src/train.py`` so that the same
 implementation can be reused by training, evaluation, and serving. The
@@ -52,7 +52,7 @@ def conformal_quantile(residuals: Sequence[float] | np.ndarray, coverage: float)
     if arr.size == 0:
         raise ValueError(
             "conformal_quantile yêu cầu calibration set không rỗng; "
-            "không được fallback sang train/test (xem P0.1)."
+            "không được thay bằng residual của train hoặc test."
         )
     if not 0.0 < coverage < 1.0:
         raise ValueError(f"coverage phải nằm trong (0, 1); nhận {coverage!r}.")

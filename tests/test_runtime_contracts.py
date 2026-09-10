@@ -2,9 +2,9 @@ import pandas as pd
 
 from src.data.loader import load_air_quality
 from src.data.regularization import audit_hourly_gaps
-from src.data.runtime_gate import audit_runtime_history
-from src.data.schema import AirQualityDataset, normalize_timestamp_series
+from src.data.schema import normalize_timestamp_series
 from src.features.exogenous import lookup_feature_at_offset
+from src.serving.input_validation import check_forecast_input
 
 
 def test_exogenous_latency_is_exact_and_station_aware():
@@ -41,7 +41,7 @@ def test_available_at_blocks_future_telemetry():
     assert values.iloc[1] == 101.0
 
 
-def test_runtime_gate_marks_large_gap_for_persistence_fallback():
+def test_input_validation_marks_large_gap_for_persistence():
     frame = pd.DataFrame(
         {
             "timestamp": pd.to_datetime(
@@ -51,35 +51,20 @@ def test_runtime_gate_marks_large_gap_for_persistence_fallback():
             "PM2.5": [10.0, 11.0, 12.0],
         }
     )
-    audit = audit_runtime_history(
+    audit = check_forecast_input(
         frame,
         timestamp_column="timestamp",
         target_column="PM2.5",
         required_history_hours=3,
         allowed_gap_hours=6,
     )
-    assert audit["status"] == "DEGRADED"
-    assert audit["fallback_required"] is True
+    assert audit["status"] == "warning"
+    assert audit["use_persistence"] is True
 
 
 def test_naive_timestamp_is_stored_as_utc():
     values = normalize_timestamp_series(pd.Series(["2024-01-01 07:00"]))
     assert str(values.iloc[0]) == "2024-01-01 00:00:00+00:00"
-
-
-def test_air_quality_dataset_defaults_to_canonical_utc():
-    dataset = AirQualityDataset(
-        frame=pd.DataFrame(
-            {
-                "timestamp": pd.to_datetime(["2024-01-01 00:00:00"], utc=True),
-                "station_id": ["A"],
-            }
-        ),
-        source="test",
-        snapshot_id="snapshot-test",
-    )
-
-    assert dataset.timezone == "UTC"
 
 
 def test_csv_loader_normalizes_available_at_to_utc(tmp_path):

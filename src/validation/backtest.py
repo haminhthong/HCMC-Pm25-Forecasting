@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from src.calibration.conformal import conformal_quantile
-from src.evaluate import regression_and_classification_metrics
+from src.evaluation.metrics import regression_and_classification_metrics
 from src.forecasting.trainer import make_pipeline
 
 
@@ -33,6 +33,9 @@ def expanding_time_folds(
         else:
             train_mask = frame[timestamp_column] < validation_start
         validation_mask = frame[timestamp_column].between(validation_start, validation_end)
+        if "target_timestamp" in frame.columns:
+            # Không đưa mẫu có nhãn nằm sau cuối fold vào fold hiện tại.
+            validation_mask &= frame["target_timestamp"] <= validation_end
         result.append((np.flatnonzero(train_mask), np.flatnonzero(validation_mask)))
     return result
 

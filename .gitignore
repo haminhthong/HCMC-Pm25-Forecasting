@@ -7,9 +7,7 @@ __pycache__/
 venv/
 .env
 mlruns/
-artifacts/*.joblib
-artifacts/*.png
-artifacts/evaluation.json
+artifacts/
 reports/evaluation_summary.md
 data/*.csv
 !data/sample/*.csv

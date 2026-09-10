@@ -50,22 +50,22 @@ else:
             interval_str = (
                 f"[{interval.get('lower', 0):.1f} - {interval.get('upper', 0):.1f}] µg/m³"
             )
-            c4.metric("Khoảng 90% Conformal", interval_str)
+            c4.metric("Khoảng Conformal", interval_str)
             width = interval.get(
                 "width",
                 round(interval.get("upper", 0) - interval.get("lower", 0), 2),
             )
             c5.metric("Độ rộng khoảng (MPIW)", f"±{width / 2:.1f} µg/m³")
 
-            strategy = result.get("forecast_strategy", "ml_model")
-            serving_champ = result.get("serving_champion", "unknown")
-            if strategy == "ml_model":
-                badge = f"🟢 **Serving Champion:** `{serving_champ}` (ML Model đạt Quality Gate)"
+            strategy = result.get("forecast_strategy", "persistence")
+            best_model = result.get("best_cv_model", "unknown")
+            if strategy == "persistence":
+                badge = "🟠 **Chiến lược:** `persistence` (history không đủ tốt cho model)"
             else:
-                badge = "🟠 **Serving Champion:** `Persistence Fallback` (Quality Gate an toàn)"
+                badge = f"🟢 **Chiến lược:** `{strategy}` (best CV model: `{best_model}`)"
 
             st.markdown(
-                f"{badge} · **Mã phiên bản:** `{result.get('model_version', 'latest')}` · "
+                f"{badge} · **Phạm vi dữ liệu:** `{result.get('dataset_scope', 'sample')}` · "
                 f"**Origin (t):** `{result.get('forecast_origin')}` · "
                 f"**Target (t+1):** `{result.get('forecast_for')}`"
             )
