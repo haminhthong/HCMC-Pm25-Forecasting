@@ -21,3 +21,41 @@ jobs:
       - run: python -m ruff check src app tests
       - run: python -m pytest
       - run: python -m src.pipeline train --config configs/config.yaml --no-artifacts
+
+  docker-smoke:
+    name: Docker smoke test
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Cài dependency runtime
+        run: python -m pip install -r requirements.txt
+      - name: Tạo artifact mẫu cho API
+        run: python -m src.pipeline train --config configs/config.yaml
+      - name: Build Docker image
+        run: docker build --tag hcmc-pm25-forecasting:ci .
+      - name: Chạy API container
+        run: |
+          docker run --detach \
+            --name hcmc-pm25-forecasting-ci \
+            --publish 8000:8000 \
+            --volume "${GITHUB_WORKSPACE}/artifacts:/app/artifacts" \
+            hcmc-pm25-forecasting:ci
+      - name: Chờ healthcheck API
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs hcmc-pm25-forecasting-ci
+          exit 1
+      - name: Dọn container kiểm thử
+        if: always()
+        run: docker rm --force hcmc-pm25-forecasting-ci || true

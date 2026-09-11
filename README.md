@@ -34,7 +34,7 @@ Dự án nhận history PM2.5 theo từng trạm và dự báo giá trị của 
 | Ridge, HistGradientBoosting, Persistence, Seasonal Naive 24h | Mở rộng benchmark citywide với dữ liệu lớn |
 | Split conformal interval | Hiệu chuẩn lại trên các giai đoạn dài hơn |
 | FastAPI và Streamlit demo | |
-| CI với Ruff, pytest, pip check và smoke train | |
+| CI với Ruff, pytest, pip check, smoke train và Docker smoke test | |
 
 ## Kết quả mẫu hiện tại
 
@@ -214,6 +214,8 @@ python -m src.pipeline train --config configs/config.yaml --no-artifacts
 ```
 
 GitHub Actions chạy cùng các bước trên với Python 3.10 và 3.11. `--no-artifacts` bảo đảm CI không ghi model vào repository.
+Job Docker của CI chạy train mẫu, build `Dockerfile`, mount `artifacts/`, khởi động API
+và chờ `/health` trả HTTP 200.
 
 ## Huấn luyện và tạo bộ file kết quả
 
