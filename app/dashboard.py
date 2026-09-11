@@ -62,7 +62,9 @@ else:
             if strategy == "persistence":
                 badge = "🟠 **Chiến lược:** `persistence` (history không đủ tốt cho model)"
             else:
-                badge = f"🟢 **Chiến lược:** `{strategy}` (mô hình tốt nhất trên CV: `{best_model}`)"
+                badge = (
+                    f"🟢 **Chiến lược:** `{strategy}` (mô hình tốt nhất trên CV: `{best_model}`)"
+                )
 
             st.markdown(
                 f"{badge} · **Phạm vi dữ liệu:** `{result.get('dataset_scope', 'sample')}` · "
@@ -93,14 +95,14 @@ else:
                     mode="markers",
                     name="Dự báo (t+1)",
                     marker={"color": "#d62728", "size": 12, "symbol": "diamond"},
-                    error_y=dict(
-                        type="data",
-                        symmetric=False,
-                        array=[upper_val - pred_val],
-                        arrayminus=[pred_val - lower_val],
-                        color="#d62728",
-                        width=6,
-                    ),
+                    error_y={
+                        "type": "data",
+                        "symmetric": False,
+                        "array": [upper_val - pred_val],
+                        "arrayminus": [pred_val - lower_val],
+                        "color": "#d62728",
+                        "width": 6,
+                    },
                 )
             )
             fig.update_layout(

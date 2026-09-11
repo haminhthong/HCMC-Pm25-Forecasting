@@ -29,10 +29,10 @@ def sample_config():
 
 def test_prediction_rejects_multiple_stations(sample_config, monkeypatch):
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([20.0])
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
 
     records = pd.DataFrame(
@@ -48,10 +48,10 @@ def test_prediction_rejects_multiple_stations(sample_config, monkeypatch):
 
 def test_prediction_rejects_insufficient_history(sample_config, monkeypatch):
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([20.0])
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
 
     records = pd.DataFrame(
@@ -67,15 +67,13 @@ def test_prediction_rejects_insufficient_history(sample_config, monkeypatch):
 
 def test_prediction_rejects_duplicate_timestamps(sample_config, monkeypatch):
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([20.0])
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
 
-    dates = list(pd.date_range("2024-01-01", periods=24, freq="h")) + [
-        pd.Timestamp("2024-01-01 00:00")
-    ]
+    dates = [*pd.date_range("2024-01-01", periods=24, freq="h"), pd.Timestamp("2024-01-01 00:00")]
     records = pd.DataFrame(
         {
             "timestamp": dates,
@@ -89,10 +87,10 @@ def test_prediction_rejects_duplicate_timestamps(sample_config, monkeypatch):
 
 def test_prediction_rejects_negative_pm25(sample_config, monkeypatch):
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([20.0])
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
 
     records = pd.DataFrame(
@@ -110,10 +108,10 @@ def test_missing_o3_so2_uses_persistence_fallback(sample_config, monkeypatch):
     """Thiếu toàn bộ exogenous thì vẫn dự báo được bằng Persistence."""
 
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([25.4])
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
     predictor.metadata["forecast_strategy"] = "fake_model"
 
@@ -137,10 +135,10 @@ def test_persistence_strategy_fallback(sample_config, monkeypatch):
     """Kiểm tra chiến lược Persistence không gọi model ML."""
 
     class FakeModel:
-        def predict(self, df):
+        def predict(self, _df):
             return np.array([999.0])  # Giá trị bất kỳ không được gọi
 
-    monkeypatch.setattr("joblib.load", lambda path: FakeModel())
+    monkeypatch.setattr("joblib.load", lambda _: FakeModel())
     predictor = Predictor(sample_config)
     predictor.metadata = {
         "forecast_strategy": "persistence",

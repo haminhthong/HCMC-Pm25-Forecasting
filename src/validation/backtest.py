@@ -76,9 +76,7 @@ def evaluate_candidate(
 
     coverage_target = float(config.get("split", {}).get("coverage", 0.9))
     residual_q90 = (
-        conformal_quantile(validation_residuals, coverage_target)
-        if validation_residuals
-        else 5.0
+        conformal_quantile(validation_residuals, coverage_target) if validation_residuals else 5.0
     )
     return {
         "folds": fold_metrics,

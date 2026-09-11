@@ -29,7 +29,7 @@ def sliced_error_analysis(
     by_level: dict[str, Any] = {}
     for level_name, group in work.groupby("_true_level", sort=False):
         by_level[str(level_name)] = {
-            "count": int(len(group)),
+            "count": len(group),
             "mae": float(group["_abs_error"].mean()),
             "max_error": float(group["_abs_error"].max()),
         }
@@ -39,7 +39,7 @@ def sliced_error_analysis(
     work["_hour"] = pd.to_datetime(work[timestamp_column]).dt.hour
     for hour_val, group in work.groupby("_hour"):
         by_hour[str(hour_val)] = {
-            "count": int(len(group)),
+            "count": len(group),
             "mae": float(group["_abs_error"].mean()),
         }
 

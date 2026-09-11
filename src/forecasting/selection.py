@@ -27,11 +27,7 @@ def select_forecast_strategy(
 
     model_mae = float(model_metrics["mae"])
     persistence_mae = float(persistence_metrics["mae"])
-    improvement = (
-        (persistence_mae - model_mae) / persistence_mae
-        if persistence_mae > 0
-        else 0.0
-    )
+    improvement = (persistence_mae - model_mae) / persistence_mae if persistence_mae > 0 else 0.0
     passes_mae = model_mae < persistence_mae and improvement >= minimum_improvement
     passes_cv_stability = float(cv_mae_std) <= maximum_cv_mae_std
 

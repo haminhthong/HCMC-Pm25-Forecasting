@@ -51,13 +51,15 @@ def test_loader_rejects_duplicate_station_timestamps(tmp_path):
             "PM2.5": [10.0, 11.0],
         }
     ).to_csv(path, index=False)
-    config = {"data": {
-        "path": str(path),
-        "timestamp_column": "timestamp",
-        "station_column": "station_id",
-        "target_column": "PM2.5",
-        "required_columns": ["timestamp", "station_id", "PM2.5"],
-    }}
+    config = {
+        "data": {
+            "path": str(path),
+            "timestamp_column": "timestamp",
+            "station_column": "station_id",
+            "target_column": "PM2.5",
+            "required_columns": ["timestamp", "station_id", "PM2.5"],
+        }
+    }
     with pytest.raises(ValueError, match="trùng"):
         load_air_quality(config)
 

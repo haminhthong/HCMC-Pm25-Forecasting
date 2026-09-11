@@ -139,8 +139,7 @@ def validate_config(config: dict[str, Any]) -> None:
 
     availability = config.get("feature_availability", {})
     invalid_availability = [
-        name for name, delay in availability.items()
-        if not isinstance(delay, int) or delay < 0
+        name for name, delay in availability.items() if not isinstance(delay, int) or delay < 0
     ]
     if invalid_availability:
         raise ValueError(

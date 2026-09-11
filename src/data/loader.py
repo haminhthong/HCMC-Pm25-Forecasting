@@ -80,8 +80,7 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
         raise ValueError(f"Cột {station} không được chứa station_id rỗng.")
     if frame.duplicated([station, timestamp]).any():
         raise ValueError(
-            f"Dữ liệu chứa timestamp trùng sau khi chuẩn hóa station_id "
-            f"({station}, {timestamp})."
+            f"Dữ liệu chứa timestamp trùng sau khi chuẩn hóa station_id ({station}, {timestamp})."
         )
 
     if data_config.get("zero_as_missing", False):
@@ -93,8 +92,7 @@ def load_air_quality(config: dict[str, Any]) -> pd.DataFrame:
         if not valid_target.all():
             invalid_count = int((~valid_target).sum())
             raise ValueError(
-                f"Cột {target} có {invalid_count} giá trị ngoài miền "
-                f"[{minimum}, {maximum}]."
+                f"Cột {target} có {invalid_count} giá trị ngoài miền [{minimum}, {maximum}]."
             )
 
     return frame

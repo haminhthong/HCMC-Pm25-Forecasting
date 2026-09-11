@@ -137,9 +137,7 @@ class Predictor:
         required_history = int(inference_config.get("required_history_hours", 25))
         allowed_gap = int(inference_config.get("allowed_gap_hours", 6))
         if len(work) < required_history:
-            raise ValueError(
-                f"Cần tối thiểu {required_history} quan trắc (giờ); nhận {len(work)}."
-            )
+            raise ValueError(f"Cần tối thiểu {required_history} quan trắc (giờ); nhận {len(work)}.")
         quality = check_forecast_input(
             work,
             timestamp_column=timestamp_col,

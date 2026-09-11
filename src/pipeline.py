@@ -95,8 +95,7 @@ def run_train_pipeline(
     candidates = config["model_comparison"]["candidates"]
     _, feature_columns = make_pipeline(config, candidates[0])
     backtest = {
-        name: evaluate_candidate(name, train_frame, config, feature_columns)
-        for name in candidates
+        name: evaluate_candidate(name, train_frame, config, feature_columns) for name in candidates
     }
     best_cv_model = min(backtest, key=lambda name: backtest[name]["mae_mean"])
 
@@ -194,10 +193,7 @@ def run_train_pipeline(
         selected_station_q = model_station_q
 
     test_quantiles = (
-        test_frame[station]
-        .map(selected_station_q)
-        .fillna(selected_global_q)
-        .to_numpy()
+        test_frame[station].map(selected_station_q).fillna(selected_global_q).to_numpy()
     )
     test_lower = np.maximum(0.0, selected_prediction - test_quantiles)
     test_upper = selected_prediction + test_quantiles
@@ -237,7 +233,7 @@ def run_train_pipeline(
             "persistence_metrics": persistence_cal_metrics,
             "model_residual_quantile": model_global_q,
             "persistence_residual_quantile": persistence_global_q,
-            "calibration_rows": int(len(calibration_frame)),
+            "calibration_rows": len(calibration_frame),
             "calibration_window": [
                 str(calibration_frame[timestamp].min()),
                 str(calibration_frame[timestamp].max()),
@@ -280,14 +276,12 @@ def run_train_pipeline(
         "data_provenance": {
             "source_file": str(data_path),
             "data_sha256": sha256_file(data_path),
-            "rows_raw": int(len(raw)),
-            "rows_train": int(len(train_frame)),
-            "rows_calibration": int(len(calibration_frame)),
-            "rows_test": int(len(test_frame)),
+            "rows_raw": len(raw),
+            "rows_train": len(train_frame),
+            "rows_calibration": len(calibration_frame),
+            "rows_test": len(test_frame),
             "storage_timezone": "UTC",
-            "calendar_timezone": config["data"].get(
-                "calendar_timezone", "Asia/Ho_Chi_Minh"
-            ),
+            "calendar_timezone": config["data"].get("calendar_timezone", "Asia/Ho_Chi_Minh"),
         },
     }
 
@@ -324,6 +318,7 @@ def main() -> None:
     predict_parser = subparsers.add_parser("predict", help="Dự báo từ CSV history")
     predict_parser.add_argument("--artifact-dir", default="artifacts")
     predict_parser.add_argument("--input", required=True)
+    predict_parser.add_argument("--station-id", default=None, help="Mã trạm quan trắc cần dự báo")
 
     args = parser.parse_args()
     if args.command == "train":
@@ -335,7 +330,14 @@ def main() -> None:
         )
     else:
         predictor = Predictor.from_artifact(args.artifact_dir)
-        result = predictor.predict(pd.read_csv(args.input))
+        frame = pd.read_csv(args.input)
+        station_column = predictor.config["data"]["station_column"]
+        if args.station_id:
+            frame = frame[frame[station_column].astype(str) == str(args.station_id)]
+        elif station_column in frame.columns and frame[station_column].nunique() > 1:
+            first_station = frame[station_column].dropna().iloc[0]
+            frame = frame[frame[station_column] == first_station]
+        result = predictor.predict(frame)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

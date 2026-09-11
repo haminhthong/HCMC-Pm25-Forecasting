@@ -120,9 +120,7 @@ def prepare_exogenous_columns(
             timestamp,
             col,
             offset_hours=-latency,
-            source_timezone=config.get("data", {}).get(
-                "source_timezone", DEFAULT_SOURCE_TIMEZONE
-            ),
+            source_timezone=config.get("data", {}).get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
         )
 
     return result

@@ -145,9 +145,7 @@ def model_feature_columns(config: dict[str, Any]) -> list[str]:
     )
     delta_lags = config["features"].get("delta_lags", [1, 3])
     deltas = [
-        f"{target}_delta_{lag}h"
-        for lag in delta_lags
-        if lag in config["features"].get("lags", [])
+        f"{target}_delta_{lag}h" for lag in delta_lags if lag in config["features"].get("lags", [])
     ]
     base_cols = [
         target,

@@ -114,8 +114,7 @@ def predict(request: PredictionRequest):
     """Dự báo từ history raw gửi trong request."""
     try:
         records = [
-            item.model_dump(by_alias=True, exclude_none=True)
-            for item in request.observations
+            item.model_dump(by_alias=True, exclude_none=True) for item in request.observations
         ]
         return get_predictor().predict(pd.DataFrame(records))
     except ValueError as error:

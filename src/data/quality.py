@@ -56,10 +56,10 @@ def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, 
             frame["available_at"],
             source_timezone=data_config.get("source_timezone", DEFAULT_SOURCE_TIMEZONE),
         )
-        availability_violations = int((available_at > observed_at).sum())
+        availability_violations = int((available_at < observed_at).sum())
 
     return {
-        "rows": int(len(frame)),
+        "rows": len(frame),
         "stations": int(frame[station].nunique()),
         "period": [str(frame[timestamp].min()), str(frame[timestamp].max())],
         "duplicate_station_timestamps": int(duplicate_mask.sum()),

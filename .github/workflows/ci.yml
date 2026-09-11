@@ -19,6 +19,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m pip check
       - run: python -m ruff check src app tests
+      - run: python -m ruff format --check src app tests
       - run: python -m pytest
       - run: python -m src.pipeline train --config configs/config.yaml --no-artifacts
 
@@ -56,6 +57,9 @@ jobs:
           done
           docker logs hcmc-pm25-forecasting-ci
           exit 1
+      - name: Kiểm tra endpoint dự báo qua Docker container
+        run: |
+          curl --fail --silent --show-error "http://127.0.0.1:8000/v1/stations/Tr%E1%BA%A1m%20A/forecast"
       - name: Dọn container kiểm thử
         if: always()
         run: docker rm --force hcmc-pm25-forecasting-ci || true

@@ -52,9 +52,7 @@ def regression_and_classification_metrics(
     high_mask = y_true_arr >= medium_max
 
     # Đếm số mẫu thực tế của từng nhóm.
-    support_by_class = {
-        label: int((true_labels == label).sum()) for label in labels
-    }
+    support_by_class = {label: int((true_labels == label).sum()) for label in labels}
     observed_labels = [label for label in labels if (true_labels == label).any()]
 
     # Báo cáo cả macro-F1 trên toàn bộ nhãn và trên nhãn thực sự xuất hiện.

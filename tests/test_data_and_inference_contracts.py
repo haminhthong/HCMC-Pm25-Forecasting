@@ -17,7 +17,7 @@ from src.inference.predictor import Predictor
 
 
 class _MockModel:
-    def predict(self, X):
+    def predict(self, _x):
         return np.array([25.0])
 
 
@@ -155,13 +155,16 @@ def test_unknown_station_policy():
             "artifacts": {"directory": str(tmp_path), "model_file": "model.joblib"},
         }
         import joblib
+
         joblib.dump(_MockModel(), tmp_path / "model.joblib")
         (tmp_path / "metadata.json").write_text(
-            json.dumps({
-                "model_name": "mock",
-                "trained_stations": ["Trạm A"],
-                "prediction_interval": {"residual_quantile": 4.0},
-            }),
+            json.dumps(
+                {
+                    "model_name": "mock",
+                    "trained_stations": ["Trạm A"],
+                    "prediction_interval": {"residual_quantile": 4.0},
+                }
+            ),
             encoding="utf-8",
         )
 

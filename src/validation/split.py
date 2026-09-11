@@ -41,7 +41,9 @@ def split_by_time(
         if not train_end_ts < calibration_end_ts < test_end_ts:
             raise ValueError("Các mốc split calendar phải tăng dần theo thời gian.")
 
-        target_column = "target_timestamp" if "target_timestamp" in frame.columns else timestamp_column
+        target_column = (
+            "target_timestamp" if "target_timestamp" in frame.columns else timestamp_column
+        )
         train_frame = frame[frame[target_column] < train_end_ts].copy()
         cal_mask = (frame[timestamp_column] >= train_end_ts) & (
             frame[timestamp_column] < calibration_end_ts
