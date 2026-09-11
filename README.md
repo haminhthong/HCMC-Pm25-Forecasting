@@ -260,15 +260,25 @@ Ví dụ request tối giản:
 
 Request thực tế cần ít nhất 25 dòng theo giới hạn API. Response có `predicted_pm25`, `forecast_strategy`, `interval` và `data_quality`.
 
-## Chạy dashboard
+## Chạy Station Forecast & Data Quality Console (Streamlit)
 
-Trong terminal khác khi API đang chạy:
+Khởi động Console chuyên dụng cho chuyên viên môi trường và kỹ thuật viên vận hành trạm:
 
 ```bash
 streamlit run app/dashboard.py
 ```
 
-Dashboard chỉ là demo trực quan; các nhóm `Thấp/Trung bình/Cao` trong dự án là nhãn phân tích nội bộ, không phải AQI chính thức hay khuyến nghị y tế.
+Console hoạt động ở chế độ kép (**Dual Engine Mode**):
+- Tự động kết nối tới FastAPI (`http://localhost:8000`) nếu API đang chạy.
+- Tự động fallback sang in-memory `Predictor.from_artifact()` nếu API offline, cho phép chạy độc lập không phụ thuộc service nền.
+
+Bố cục giao diện gồm thanh bên điều khiển và 4 Tab chuyên sâu:
+1. **Forecast (Dự báo t+1):** Hiển thị Origin ($t$) & Target ($t+1$), 4 card chỉ số chính (PM2.5 hiện tại, dự báo $t+1$, khoảng bất định Conformal $90\%$, huy hiệu chiến lược Ridge/Persistence kèm lý do runtime), biểu đồ chuỗi quan trắc và cảnh báo trạm ngoài phân phối (OOD Station).
+2. **History & Data Quality:** Bảng lịch sử quan trắc chi tiết, thanh độ đầy đủ (Completeness %), kiểm toán khoảng trống dữ liệu theo chính sách (`allowed_gap_hours: 6`, `required_history_hours: 25`), cam kết không rò rỉ tương lai (*No future-released observation used*).
+3. **Compare Stations:** So sánh dự báo và trạng thái chất lượng dữ liệu giữa các trạm có trong bộ dữ liệu hiện tại kèm biểu đồ đối chiếu xu hướng.
+4. **Model & Limitations:** Minh bạch kỹ thuật với bảng benchmark mẫu (chứng minh Persistence vượt Ridge trên tập test mẫu), quy trình chọn mô hình qua Expanding CV, kiểm định hiệu chuẩn Conformal và bảng tuyên bố rõ ràng những gì hệ thống **không** thực hiện (Non-Goals).
+
+> **Lưu ý phạm vi:** Các mức `Thấp/Trung bình/Cao` là nhóm phân tích nội bộ thử nghiệm, tuyệt đối không phải chỉ số AQI chính thức hay khuyến nghị y tế.
 
 ## Chạy bằng Docker
 
