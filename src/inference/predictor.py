@@ -1,4 +1,4 @@
-"""Đóng gói preprocessing, model và interval cho inference."""
+"""Đóng gói tiền xử lý, mô hình và khoảng dự báo."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from src.data.regularization import regularize_hourly_series
 from src.data.schema import normalize_timestamp_series
 from src.evaluation.metrics import classify_pm25, get_threshold_params
 from src.features.builder import build_features, model_feature_columns
-from src.serving.input_validation import check_forecast_input
+from src.inference.input_validation import check_forecast_input
 
 
 class Predictor:
@@ -72,7 +72,7 @@ class Predictor:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def _assert_feature_schema(self) -> None:
-        """Báo lỗi sớm nếu thứ tự cột train và serving không khớp."""
+        """Báo lỗi sớm nếu thứ tự cột huấn luyện và dự báo không khớp."""
         saved_columns = self._feature_schema.get("model_feature_columns")
         if not saved_columns:
             return
@@ -133,9 +133,9 @@ class Predictor:
             group_columns=[station_col],
         )
 
-        serving_config = self.config.get("serving", {})
-        required_history = int(serving_config.get("required_history_hours", 25))
-        allowed_gap = int(serving_config.get("allowed_gap_hours", 6))
+        inference_config = self.config.get("inference", {})
+        required_history = int(inference_config.get("required_history_hours", 25))
+        allowed_gap = int(inference_config.get("allowed_gap_hours", 6))
         if len(work) < required_history:
             raise ValueError(
                 f"Cần tối thiểu {required_history} quan trắc (giờ); nhận {len(work)}."

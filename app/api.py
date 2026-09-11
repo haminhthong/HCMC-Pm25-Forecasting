@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.data.loader import load_air_quality
-from src.serving.predictor import Predictor
+from src.inference.predictor import Predictor
 
 DEFAULT_ARTIFACT_ROOT = Path("artifacts")
 

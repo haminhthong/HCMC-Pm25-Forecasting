@@ -19,7 +19,7 @@ from src.data.schema import (
 def resolve_data_path(configured_path: str | Path) -> Path:
     """Tìm CSV trong đường dẫn cấu hình, thư mục dự án hoặc /content (Colab)."""
     candidate = Path(configured_path).expanduser()
-    # Support both running from repo root or parent workspace
+    # Hỗ trợ chạy từ thư mục repository hoặc thư mục cha của workspace.
     candidates = [
         candidate,
         Path.cwd() / candidate,

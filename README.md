@@ -29,8 +29,8 @@ Dự án nhận history PM2.5 theo từng trạm và dự báo giá trị của 
 | Đọc CSV và kiểm tra schema | Kết nối station API thật |
 | Chuẩn hóa UTC và regularize theo giờ | Incremental storage và backfill |
 | Lag theo timestamp, rolling causal, time features | Xử lý late-arriving observation theo lịch chạy |
-| Temporal train/calibration/test split | Orchestration định kỳ |
-| Expanding-window backtest | Data drift monitoring liên tục |
+| Temporal train/calibration/test split | Tự động chạy theo lịch |
+| Expanding-window backtest | Theo dõi chất lượng dữ liệu theo từng đợt |
 | Ridge, HistGradientBoosting, Persistence, Seasonal Naive 24h | Mở rộng benchmark citywide với dữ liệu lớn |
 | Split conformal interval | Hiệu chuẩn lại trên các giai đoạn dài hơn |
 | FastAPI và Streamlit demo | |
@@ -74,7 +74,7 @@ Lag PM2.5 tại `t-1h`, `t-2h`... được lookup bằng khóa `(station_id, tim
 | Missing hour | Insert dòng rỗng khi regularize; giữ `NaN` để pipeline impute thống nhất |
 | Late observation | Không dùng nếu `available_at` sau forecast origin |
 | Out-of-order event | Sort ổn định theo trạm và timestamp trước khi audit/regularize |
-| Missing exogenous | Cảnh báo; dùng Persistence để tránh lệch phân phối khi serving |
+| Missing exogenous | Cảnh báo; dùng Persistence để tránh lệch phân phối khi dự báo |
 | Station outage hoặc gap lớn | Cảnh báo; dùng Persistence khi vượt `allowed_gap_hours` |
 | History dưới 25 giờ hoặc PM2.5 hiện tại thiếu | Không tạo dự báo, trả lỗi input |
 
@@ -114,8 +114,8 @@ Quy trình thực thi:
 7. `src/forecasting/selection.py` chọn `best_cv_model`, sau đó quyết định `forecast_strategy` là model đó hoặc `persistence`.
 8. `src/calibration/conformal.py` dùng calibration window riêng để tạo quantile và interval.
 9. `src/evaluation` báo cáo baseline, MAE/RMSE/MASE/skill score, PICP và slice theo trạm.
-10. `src/serving/input_validation.py` kiểm tra history runtime; gap lớn có thể chuyển chiến lược sang Persistence.
-11. `src/serving/predictor.py` dựng feature giống train và trả forecast, mức phân tích, interval và chất lượng input.
+10. `src/inference/input_validation.py` kiểm tra history runtime; gap lớn có thể chuyển chiến lược sang Persistence.
+11. `src/inference/predictor.py` dựng feature giống train và trả forecast, mức phân tích, interval và chất lượng input.
 
 ## Cấu trúc thư mục
 
@@ -158,7 +158,7 @@ hcmc-pm25-forecasting/
 │   ├── artifacts/
 │   │   ├── loader.py
 │   │   └── writer.py
-│   ├── serving/
+│   ├── inference/
 │   │   ├── input_validation.py
 │   │   └── predictor.py
 │   ├── pipeline.py
@@ -185,7 +185,7 @@ hcmc-pm25-forecasting/
 ```
 
 `artifacts/` là output cục bộ sau khi train và không cần commit. V1 chỉ giữ một
-bộ artifact hiện tại để phục vụ demo.
+bộ file kết quả hiện tại để chạy demo.
 
 ## Cài đặt
 
@@ -215,7 +215,7 @@ python -m src.pipeline train --config configs/config.yaml --no-artifacts
 
 GitHub Actions chạy cùng các bước trên với Python 3.10 và 3.11. `--no-artifacts` bảo đảm CI không ghi model vào repository.
 
-## Huấn luyện và tạo artifact
+## Huấn luyện và tạo bộ file kết quả
 
 ```bash
 python -m src.pipeline train --config configs/config.yaml
@@ -236,7 +236,7 @@ python -m src.report --input artifacts/evaluation.json --output reports/evaluati
 
 ## Chạy API
 
-Train artifact trước, sau đó:
+Huấn luyện trước, sau đó:
 
 ```bash
 uvicorn app.api:app --reload
@@ -278,7 +278,7 @@ docker build -t hcmc-pm25-forecasting .
 docker run --rm -p 8000:8000 -v "${PWD}/artifacts:/app/artifacts" hcmc-pm25-forecasting
 ```
 
-Volume artifact cần thiết vì artifact model là output cục bộ và được loại khỏi Docker build context.
+Volume `artifacts` cần thiết vì model là output cục bộ và được loại khỏi Docker build context.
 
 ## Tài liệu kỹ thuật
 

@@ -1,4 +1,4 @@
-# Forecasting Protocol
+# Quy ước đánh giá dự báo PM2.5
 
 Tài liệu này chứa công thức và quy ước đánh giá được dùng bởi pipeline PM2.5. README chỉ mô tả contract và luồng vận hành; công thức chi tiết được giữ ở đây để tránh hai tài liệu diễn giải khác nhau.
 
@@ -93,7 +93,7 @@ Sau khi sắp xếp residual tăng dần, q là residual ở rank k. Khoảng d�
 
     C(x) = [max(0, y_hat - q), y_hat + q]
 
-Pipeline tính q toàn cục và q theo trạm khi trạm có ít nhất minimum_calibration_samples_per_station mẫu. Nếu trạm chưa đủ mẫu, serving dùng q toàn cục.
+Pipeline tính q toàn cục và q theo trạm khi trạm có ít nhất minimum_calibration_samples_per_station mẫu. Nếu trạm chưa đủ mẫu, bước dự báo dùng q toàn cục.
 
 Các chỉ số interval:
 
@@ -116,5 +116,5 @@ Final test chỉ dùng để báo cáo kết quả, không tham gia quyết đ�
 Recall nhóm PM2.5 cao vẫn được ghi trong báo cáo để phân tích lỗi nghiệp vụ,
 nhưng không quyết định chiến lược dự báo.
 
-Ở serving, history ngắn, PM2.5 hiện tại bị thiếu, gap lớn hoặc thiếu biến ngoại
+Ở bước dự báo, history ngắn, PM2.5 hiện tại bị thiếu, gap lớn hoặc thiếu biến ngoại
 sinh có thể kích hoạt Persistence fallback theo chính sách trong cấu hình.

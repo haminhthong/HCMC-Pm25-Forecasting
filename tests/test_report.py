@@ -16,10 +16,10 @@ def test_report_contains_backtest_and_model_selection():
     }
     report = build_markdown(evaluation)
     assert "ridge" in report
-    assert "Forecast strategy: `persistence`" in report
+    assert "Cách dự báo được chọn: `persistence`" in report
 
 
-def test_report_does_not_claim_production_gate():
+def test_report_has_neutral_summary_language():
     report = build_markdown({"backtest": {}})
-    assert "Quality gate" not in report
-    assert "production" not in report.lower()
+    assert "## So sánh và chọn chiến lược" in report
+    assert "## Khoảng dự báo Conformal" in report

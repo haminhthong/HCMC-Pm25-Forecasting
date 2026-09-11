@@ -53,7 +53,7 @@ def normalize_timestamp_series(
 
     Timestamp không có timezone được hiểu là giờ địa phương TP.HCM. Timestamp
     đã có timezone được đổi sang UTC. Quy ước này phải được dùng ở mọi điểm
-    vào hệ thống để train, backtest và serving dùng cùng một trục thời gian.
+    vào pipeline để huấn luyện, backtest và dự báo dùng cùng một trục thời gian.
     """
     parsed = pd.to_datetime(values, errors="coerce")
     if getattr(parsed.dtype, "tz", None) is None:
@@ -62,7 +62,7 @@ def normalize_timestamp_series(
                 CANONICAL_STORAGE_TIMEZONE
             )
         except (AttributeError, TypeError):
-            # Mixed naive/aware input tạo object dtype; chuẩn hóa từng phần tử
+            # Input vừa naive vừa aware tạo object dtype; chuẩn hóa từng phần tử
             # để không lặng lẽ biến một phần timestamp thành UTC giả.
             normalized = []
             for value in parsed:

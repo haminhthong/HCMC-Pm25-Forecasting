@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.serving.predictor import Predictor
+from src.inference.predictor import Predictor
 
 
 @pytest.fixture

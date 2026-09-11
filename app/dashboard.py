@@ -62,7 +62,7 @@ else:
             if strategy == "persistence":
                 badge = "🟠 **Chiến lược:** `persistence` (history không đủ tốt cho model)"
             else:
-                badge = f"🟢 **Chiến lược:** `{strategy}` (best CV model: `{best_model}`)"
+                badge = f"🟢 **Chiến lược:** `{strategy}` (mô hình tốt nhất trên CV: `{best_model}`)"
 
             st.markdown(
                 f"{badge} · **Phạm vi dữ liệu:** `{result.get('dataset_scope', 'sample')}` · "

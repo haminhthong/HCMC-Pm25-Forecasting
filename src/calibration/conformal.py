@@ -1,6 +1,6 @@
 """Tiện ích split-conformal theo hiệu chỉnh finite-sample.
 
-Module này chứa logic conformal dùng chung cho huấn luyện, đánh giá và serving.
+Module này chứa logic conformal dùng chung cho huấn luyện, đánh giá và dự báo.
 Công thức quantile áp dụng hiệu chỉnh finite-sample:
 
     rank = ceil((n + 1) * coverage)

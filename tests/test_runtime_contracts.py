@@ -4,7 +4,7 @@ from src.data.loader import load_air_quality
 from src.data.regularization import audit_hourly_gaps
 from src.data.schema import normalize_timestamp_series
 from src.features.exogenous import lookup_feature_at_offset
-from src.serving.input_validation import check_forecast_input
+from src.inference.input_validation import check_forecast_input
 
 
 def test_exogenous_latency_is_exact_and_station_aware():

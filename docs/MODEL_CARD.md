@@ -1,4 +1,4 @@
-# Model card
+# Thẻ mô hình
 
 ## Mục tiêu
 
@@ -15,9 +15,9 @@ Prototype dự báo PM2.5 của một trạm cho giờ kế tiếp từ quan tr�
 7. Tạo conformal interval từ residual của calibration window riêng.
 8. Nếu history runtime thiếu hoặc có gap vượt chính sách, dùng Persistence.
 
-## Artifact và inference
+## Bộ file kết quả và dự báo
 
-Artifact hiện tại gồm `model.joblib`, `metadata.json`, `evaluation.json` và `feature_schema.json`. Cấu hình phục vụ được đọc từ `configs/config.yaml`.
+Bộ file kết quả hiện tại gồm `model.joblib`, `metadata.json`, `evaluation.json` và `feature_schema.json`. Cấu hình dự báo được đọc từ `configs/config.yaml`.
 
 Metadata ghi:
 
@@ -34,9 +34,9 @@ Persistence là baseline bắt buộc cho dự báo `y(t+1) = y(t)`. Seasonal Na
 
 - Sample rất nhỏ, final test hiện chỉ khoảng 8 dòng và calibration khoảng 6 dòng.
 - Kết quả sample không đại diện cho toàn TP.HCM.
-- Interval chỉ minh họa triển khai split-conformal; không được diễn giải là calibration đáng tin cậy trên dữ liệu sản xuất.
+- Interval chỉ minh họa triển khai split-conformal; không được diễn giải là calibration đáng tin cậy trên dữ liệu thật.
 - Các ngưỡng `Thấp/Trung bình/Cao` là nhãn phân tích nội bộ, không phải AQI chính thức.
-- Chưa có connector station API, lưu trữ incremental, xử lý late data định kỳ hoặc drift monitoring liên tục.
+- Chưa có connector station API, lưu trữ incremental hoặc xử lý late data theo lịch.
 
 ## Cách kiểm tra
 

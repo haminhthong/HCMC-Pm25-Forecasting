@@ -58,6 +58,6 @@ artifacts:
   evaluation_file: evaluation.json
   feature_schema_file: feature_schema.json
 
-serving:
+inference:
   required_history_hours: 25
   allowed_gap_hours: 6

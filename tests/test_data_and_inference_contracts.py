@@ -1,4 +1,4 @@
-"""Comprehensive tests for lifecycle, anti-leakage contracts, ingestion, and serving."""
+"""Kiểm thử hợp đồng dữ liệu, chống rò rỉ và dự báo."""
 
 import json
 from pathlib import Path
@@ -13,7 +13,7 @@ from src.evaluation.metrics import regression_and_classification_metrics
 from src.features.lag import lookup_pm25_at_offset
 from src.forecasting.models import build_model
 from src.forecasting.trainer import make_pipeline, resolve_candidate_params
-from src.serving.predictor import Predictor
+from src.inference.predictor import Predictor
 
 
 class _MockModel:
@@ -53,8 +53,8 @@ def test_clock_time_lag_with_missing_hour():
     assert pd.isna(lags[1])
 
 
-def test_training_serving_gap_policy_same():
-    """Kiểm tra policy xử lý khoảng trống giờ (regularize_hourly_series) đồng nhất giữa train và serving."""
+def test_training_inference_gap_policy_same():
+    """Kiểm tra chính sách gap giống nhau giữa huấn luyện và dự báo."""
     raw = pd.DataFrame(
         {
             "timestamp": pd.to_datetime(["2024-01-01 10:00", "2024-01-01 12:00"]),

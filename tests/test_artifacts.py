@@ -25,8 +25,12 @@ def test_artifacts_use_one_current_bundle(tmp_path):
     assert (tmp_path / "metadata.json").is_file()
     assert (tmp_path / "evaluation.json").is_file()
     assert (tmp_path / "feature_schema.json").is_file()
-    assert not (tmp_path / "active_release.json").exists()
-    assert not (tmp_path / "models").exists()
+    assert {path.name for path in tmp_path.iterdir()} == {
+        "model.joblib",
+        "metadata.json",
+        "evaluation.json",
+        "feature_schema.json",
+    }
     assert joblib.load(tmp_path / "model.joblib") == model
     assert json.loads((tmp_path / "metadata.json").read_text()) == metadata
 

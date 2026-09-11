@@ -1,11 +1,11 @@
 """Regular hóa chuỗi thời gian theo lưới một giờ.
 
-Đây là chính sách chung cho huấn luyện và serving:
+Đây là chính sách chung cho huấn luyện và dự báo:
 
 * Với tần suất ``freq="h"``, chèn dòng ``NaN`` cho giờ thiếu để lag được tính
   trên lưới thời gian đều.
 * Giữ giá trị thiếu là ``NaN``; pipeline feature dùng ``SimpleImputer`` ở bước
-  sau để huấn luyện và serving có cùng cách xử lý.
+  sau để huấn luyện và dự báo có cùng cách xử lý.
 * Hàm không làm thay đổi ``DataFrame`` đầu vào.
 """
 

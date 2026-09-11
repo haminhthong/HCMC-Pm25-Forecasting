@@ -32,9 +32,9 @@ def validate_config(config: dict[str, Any]) -> None:
     }
     missing_sections = sorted(required_sections - set(config or {}))
     if missing_sections:
-        raise ValueError(f"Cấu hình thiếu section: {', '.join(missing_sections)}")
+        raise ValueError(f"Cấu hình thiếu mục: {', '.join(missing_sections)}")
 
-    # Split checks
+    # Kiểm tra cách chia dữ liệu theo thời gian.
     split_cfg = config["split"]
     test_fraction = split_cfg.get("test_fraction")
     calibration_fraction = split_cfg.get("calibration_fraction", 0.1)
@@ -94,29 +94,29 @@ def validate_config(config: dict[str, Any]) -> None:
             "calibration.minimum_calibration_samples_per_station phải là số nguyên dương."
         )
 
-    serving_cfg = config.get("serving", {})
+    inference_cfg = config.get("inference", {})
     for key in ("required_history_hours", "allowed_gap_hours"):
-        value = serving_cfg.get(key, 25 if key == "required_history_hours" else 6)
+        value = inference_cfg.get(key, 25 if key == "required_history_hours" else 6)
         if not isinstance(value, int) or value < 1:
-            raise ValueError(f"serving.{key} phải là số nguyên dương.")
+            raise ValueError(f"inference.{key} phải là số nguyên dương.")
 
-    # Model comparison checks
+    # Kiểm tra danh sách mô hình ứng viên.
     models_section = config.get("models")
     candidates = config["model_comparison"].get("candidates", [])
     if not isinstance(candidates, list) or not candidates:
         raise ValueError("model_comparison.candidates phải là danh sách không rỗng.")
     if not isinstance(models_section, dict):
         raise ValueError(
-            "Cấu hình phải có section `models:` map từng candidate sang hyperparameters."
+            "Cấu hình phải có mục `models:` ánh xạ từng mô hình ứng viên sang siêu tham số."
         )
     missing_models = [name for name in candidates if name not in models_section]
     if missing_models:
         raise ValueError(
-            "Các candidate sau thiếu trong `models:` section: "
+            "Các mô hình ứng viên sau thiếu trong mục `models:`: "
             + ", ".join(sorted(missing_models))
         )
 
-    # Backtest checks
+    # Kiểm tra cấu hình backtest.
     folds = split_cfg.get("backtest_folds")
     minimum_periods = split_cfg.get("minimum_train_periods")
     if not isinstance(folds, int) or folds < 2:
@@ -124,7 +124,7 @@ def validate_config(config: dict[str, Any]) -> None:
     if not isinstance(minimum_periods, int) or minimum_periods < 1:
         raise ValueError("split.minimum_train_periods phải là số nguyên dương.")
 
-    # Features checks
+    # Kiểm tra cấu hình đặc trưng.
     lags = config["features"].get("lags", [])
     windows = config["features"].get("rolling_windows", [])
     if not lags or any(not isinstance(val, int) or val < 1 for val in lags):
@@ -143,7 +143,7 @@ def validate_config(config: dict[str, Any]) -> None:
             + ", ".join(sorted(invalid_availability))
         )
 
-    # Threshold checks
+    # Kiểm tra ngưỡng phân nhóm PM2.5.
     low_max = config["thresholds"].get("low_max", config["thresholds"].get("good_max"))
     medium_max = config["thresholds"].get("medium_max", config["thresholds"].get("moderate_max"))
     if low_max is None or medium_max is None or low_max >= medium_max:

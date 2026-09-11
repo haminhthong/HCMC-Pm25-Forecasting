@@ -30,7 +30,7 @@ def validate_physical_ranges(frame: pd.DataFrame) -> dict[str, int]:
 
 
 def audit_air_quality(frame: pd.DataFrame, config: dict[str, Any]) -> dict[str, Any]:
-    """Tạo báo cáo chất lượng dữ liệu toàn diện (Quality Audit Report)."""
+    """Tạo báo cáo kiểm tra chất lượng dữ liệu đầu vào."""
     data_config = config["data"]
     timestamp = data_config["timestamp_column"]
     station = data_config["station_column"]

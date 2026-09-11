@@ -32,7 +32,7 @@ from src.features.builder import build_features
 from src.forecasting.baselines import persistence_predictions, seasonal_naive_predictions
 from src.forecasting.selection import select_forecast_strategy
 from src.forecasting.trainer import make_pipeline
-from src.serving.predictor import Predictor
+from src.inference.predictor import Predictor
 from src.utils import sha256_file
 from src.validation.backtest import evaluate_candidate
 from src.validation.split import generate_split_manifest, split_by_time
@@ -273,9 +273,9 @@ def run_train_pipeline(
         "features": feature_columns,
         "input_policy": {
             "required_history_hours": int(
-                config.get("serving", {}).get("required_history_hours", 25)
+                config.get("inference", {}).get("required_history_hours", 25)
             ),
-            "allowed_gap_hours": int(config.get("serving", {}).get("allowed_gap_hours", 6)),
+            "allowed_gap_hours": int(config.get("inference", {}).get("allowed_gap_hours", 6)),
         },
         "data_provenance": {
             "source_file": str(data_path),
@@ -314,14 +314,14 @@ def main() -> None:
     """CLI canonical của dự án."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="HCMC PM2.5 next-hour forecasting")
+    parser = argparse.ArgumentParser(description="Dự báo PM2.5 giờ kế tiếp tại TP.HCM")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     train_parser = subparsers.add_parser("train", help="Huấn luyện và đánh giá theo thời gian")
     train_parser.add_argument("--config", default="configs/config.yaml")
     train_parser.add_argument("--no-artifacts", action="store_true")
 
-    predict_parser = subparsers.add_parser("predict", help="Dự báo từ một CSV history")
+    predict_parser = subparsers.add_parser("predict", help="Dự báo từ CSV history")
     predict_parser.add_argument("--artifact-dir", default="artifacts")
     predict_parser.add_argument("--input", required=True)
 

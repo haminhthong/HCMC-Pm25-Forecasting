@@ -1,4 +1,4 @@
-"""Bộ kiểm thử kiểm định tuân thủ kiến trúc chuẩn (Architectural & Leakage Compliance Suite).
+"""Bộ kiểm thử hợp đồng chống rò rỉ và quy trình đánh giá dự báo.
 
 Bao gồm 12 ca kiểm thử bắt buộc:
 1. test_exact_hour_lag_does_not_shift_over_gap
@@ -11,7 +11,7 @@ Bao gồm 12 ca kiểm thử bắt buộc:
 8. test_persistence_baseline
 9. test_model_selection_fallback_to_persistence
 10. test_selected_strategy_test_metrics_match_policy
-11. test_conformal_interval_uses_correct_champion_residuals
+11. test_conformal_interval_uses_correct_strategy_residuals
 12. test_train_and_inference_feature_columns_match
 """
 
@@ -259,7 +259,7 @@ def test_conformal_interval_uses_correct_strategy_residuals():
 
 
 def test_train_and_inference_feature_columns_match():
-    """12. Đảm bảo feature columns khớp 100% giữa training pipeline và serving Predictor."""
+    """12. Đảm bảo cột đặc trưng khớp giữa huấn luyện và lớp dự báo."""
     _, train_cols = make_pipeline(CONFIG, "random_forest")
     expected_cols = [*model_feature_columns(CONFIG), CONFIG["data"]["station_column"]]
     assert train_cols == expected_cols

@@ -1,4 +1,4 @@
-"""Leakage-safe feature builder for PM2.5 next-hour forecasting."""
+"""Tạo đặc trưng PM2.5 giờ kế tiếp mà không rò rỉ dữ liệu tương lai."""
 
 from __future__ import annotations
 
@@ -18,13 +18,13 @@ def add_missingness_features(
     target_column: str,
     exogenous_columns: list[str],
 ) -> pd.DataFrame:
-    """Tạo các đặc trưng missingness giúp model nhận biết trạng thái gián đoạn của sensor."""
+    """Tạo cờ dữ liệu thiếu để mô hình nhận biết trạng thái gián đoạn của cảm biến."""
     result = frame.copy()
     lag_1_col = f"{target_column}_lag_1"
     if lag_1_col in result.columns:
         result[f"{target_column}_lag_1_missing"] = result[lag_1_col].isna().astype(float)
 
-    # Missingness count in exogenous telemetry
+    # Đếm số biến ngoại sinh đang bị thiếu.
     existing_exo = [c for c in exogenous_columns if c in result.columns]
     if existing_exo:
         result["exogenous_missing_count"] = result[existing_exo].isna().sum(axis=1).astype(float)
@@ -48,7 +48,7 @@ def build_features(
     result = frame.sort_values([station, timestamp], kind="stable").copy()
     label_source = result.copy()
 
-    # Feature hiện tại cũng phải tuân thủ available_at. Nhãn t+1 bên dưới
+    # Đặc trưng hiện tại cũng phải tuân thủ available_at. Nhãn t+1 bên dưới
     # được lookup riêng và không bị giới hạn bởi thời điểm phát hành nhãn.
     if "available_at" in result.columns:
         result[target] = lookup_feature_at_offset(
@@ -60,7 +60,7 @@ def build_features(
             source_timezone=source_timezone,
         )
 
-    # 1. Clock-time lags: tra cứu theo số giờ thực tế, không dịch chuyển vị trí dòng
+    # 1. Lag theo mốc giờ thực: không dịch chuyển theo vị trí dòng.
     for lag in config["features"]["lags"]:
         result[f"{target}_lag_{lag}"] = lookup_pm25_at_offset(
             result,
@@ -71,11 +71,11 @@ def build_features(
             source_timezone=source_timezone,
         )
 
-    # 2. Trend differences: chênh lệch nồng độ so với 1h và 3h trước
+    # 2. Độ lệch xu hướng: chênh lệch nồng độ so với 1h và 3h trước.
     delta_lags = config["features"].get("delta_lags", [1, 3])
     result = add_trend_features(result, target, delta_lags=delta_lags)
 
-    # 3. Rolling statistics (mean & std) với closed='left' (chỉ dùng lịch sử trước t)
+    # 3. Thống kê rolling (mean và std) với closed='left' (chỉ dùng lịch sử trước t).
     include_rolling_std = config["features"].get("include_rolling_std", True)
     result = add_rolling_features(
         result,
@@ -86,22 +86,22 @@ def build_features(
         include_std=include_rolling_std,
     )
 
-    # 4. Cyclic time features
+    # 4. Đặc trưng thời gian tuần hoàn.
     result = add_time_features(
         result,
         timestamp,
         calendar_timezone=config.get("data", {}).get("calendar_timezone", "Asia/Ho_Chi_Minh"),
     )
 
-    # 5. Exogenous features availability
+    # 5. Đặc trưng ngoại sinh theo thời điểm đã có dữ liệu.
     result = prepare_exogenous_columns(result, config)
 
-    # 6. Optional explicit missingness indicators
+    # 6. Cờ tùy chọn cho dữ liệu thiếu.
     if config.get("features", {}).get("include_missingness_features", False):
         exo_cols = config.get("features", {}).get("exogenous_columns", [])
         result = add_missingness_features(result, target, exo_cols)
 
-    # 7. Target & Baselines
+    # 7. Nhãn tương lai và baseline.
     if include_target:
         result["target_timestamp"] = result[timestamp] + pd.to_timedelta(1, unit="h")
         result["target_next_hour"] = lookup_pm25_at_offset(
