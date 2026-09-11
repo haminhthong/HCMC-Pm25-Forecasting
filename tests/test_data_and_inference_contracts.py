@@ -68,35 +68,41 @@ def test_training_inference_gap_policy_same():
     assert pd.isna(regularized.iloc[1]["PM2.5"])
 
 
+def test_regularization_reports_inserted_hours():
+    """Kiểm tra regularization báo đúng số mốc giờ được chèn."""
+    raw = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(["2024-01-01 10:00", "2024-01-01 12:00"]),
+            "station": ["Trạm A", "Trạm A"],
+            "PM2.5": [20.0, 35.0],
+        }
+    )
+    regularized = regularize_hourly_series(raw, "timestamp", group_columns=["station"])
+
+    assert regularized.attrs["regularize_hourly_inserted_rows"] == 1
+
+
 def test_candidate_params_are_applied_consistently():
-    """Kiểm tra toàn bộ candidate models (Ridge, RF, ExtraTrees, HistGradientBoosting) nhận đúng params từ config."""
+    """Kiểm tra hai model đang dùng nhận đúng siêu tham số từ cấu hình."""
     cfg = {
         "models": {
             "ridge": {"alpha": 2.5},
-            "random_forest": {"n_estimators": 50, "max_depth": 5},
-            "extra_trees": {"n_estimators": 40, "min_samples_leaf": 3},
             "hist_gradient_boosting": {"max_iter": 30, "learning_rate": 0.1},
         }
     }
-    for model_name in ["ridge", "random_forest", "extra_trees", "hist_gradient_boosting"]:
+    for model_name in ["ridge", "hist_gradient_boosting"]:
         params = resolve_candidate_params(cfg, model_name)
         model = build_model(model_name, random_state=42, params=params)
         assert model is not None
         if model_name == "ridge":
             assert model.alpha == 2.5
-        elif model_name == "random_forest":
-            assert model.n_estimators == 50
-            assert model.max_depth == 5
-        elif model_name == "extra_trees":
-            assert model.n_estimators == 40
-            assert model.min_samples_leaf == 3
         elif model_name == "hist_gradient_boosting":
             assert model.max_iter == 30
             assert model.learning_rate == 0.1
 
 
-def test_no_standard_scaler_for_tree_models():
-    """Kiểm tra pipeline cho tree models không chứa StandardScaler, chỉ linear model (Ridge) mới dùng."""
+def test_no_standard_scaler_for_hist_gradient_boosting():
+    """Kiểm tra Ridge mới dùng StandardScaler, còn HistGradientBoosting thì không."""
     cfg = {
         "project": {"random_state": 42},
         "data": {
@@ -111,17 +117,17 @@ def test_no_standard_scaler_for_tree_models():
         },
         "models": {
             "ridge": {},
-            "random_forest": {},
+            "hist_gradient_boosting": {},
         },
     }
     ridge_pipe, _ = make_pipeline(cfg, "ridge")
-    rf_pipe, _ = make_pipeline(cfg, "random_forest")
+    tree_pipe, _ = make_pipeline(cfg, "hist_gradient_boosting")
 
     ridge_numeric_steps = dict(ridge_pipe.named_steps["preprocess"].transformers[0][1].steps)
-    rf_numeric_steps = dict(rf_pipe.named_steps["preprocess"].transformers[0][1].steps)
+    tree_numeric_steps = dict(tree_pipe.named_steps["preprocess"].transformers[0][1].steps)
 
     assert "scaler" in ridge_numeric_steps
-    assert "scaler" not in rf_numeric_steps
+    assert "scaler" not in tree_numeric_steps
 
 
 def test_unknown_station_policy():

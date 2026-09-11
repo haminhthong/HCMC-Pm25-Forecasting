@@ -50,8 +50,7 @@ CONFIG = {
         "backtest_folds": 3,
         "minimum_train_periods": 12,
     },
-    "model": {"name": "random_forest", "params": {"n_estimators": 10}},
-    "model_comparison": {"candidates": ["ridge", "random_forest"]},
+    "model_comparison": {"candidates": ["ridge", "hist_gradient_boosting"]},
     "thresholds": {
         "low_max": 12.0,
         "medium_max": 35.5,
@@ -260,6 +259,6 @@ def test_conformal_interval_uses_correct_strategy_residuals():
 
 def test_train_and_inference_feature_columns_match():
     """12. Đảm bảo cột đặc trưng khớp giữa huấn luyện và lớp dự báo."""
-    _, train_cols = make_pipeline(CONFIG, "random_forest")
+    _, train_cols = make_pipeline(CONFIG, "hist_gradient_boosting")
     expected_cols = [*model_feature_columns(CONFIG), CONFIG["data"]["station_column"]]
     assert train_cols == expected_cols

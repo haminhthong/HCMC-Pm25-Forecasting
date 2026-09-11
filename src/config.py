@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+from src.forecasting.models import SUPPORTED_MODELS
+
 
 def load_config(path: str | Path) -> dict[str, Any]:
     """Đọc và kiểm định cấu hình YAML từ đường dẫn được cung cấp."""
@@ -115,6 +117,9 @@ def validate_config(config: dict[str, Any]) -> None:
             "Các mô hình ứng viên sau thiếu trong mục `models:`: "
             + ", ".join(sorted(missing_models))
         )
+    unsupported_models = sorted(set(candidates) - SUPPORTED_MODELS)
+    if unsupported_models:
+        raise ValueError("Mô hình chưa được hỗ trợ: " + ", ".join(unsupported_models))
 
     # Kiểm tra cấu hình backtest.
     folds = split_cfg.get("backtest_folds")

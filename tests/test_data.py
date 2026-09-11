@@ -13,8 +13,8 @@ CONFIG = {
     },
     "features": {"lags": [1], "rolling_windows": [2], "exogenous_columns": ["O3", "SO2"]},
     "split": {"test_fraction": 0.2, "backtest_folds": 2, "minimum_train_periods": 24},
-    "model_comparison": {"candidates": ["random_forest"]},
-    "models": {"random_forest": {}},
+    "model_comparison": {"candidates": ["ridge"]},
+    "models": {"ridge": {}},
     "thresholds": {"low_max": 12.0, "medium_max": 35.5},
     "artifacts": {"directory": "artifacts"},
 }
@@ -70,4 +70,13 @@ def test_config_rejects_invalid_test_fraction():
         "minimum_train_periods": 24,
     }
     with pytest.raises(ValueError, match="test_fraction"):
+        validate_config(invalid_config)
+
+
+def test_config_rejects_model_outside_project_scope():
+    invalid_config = CONFIG | {
+        "model_comparison": {"candidates": ["unknown_model"]},
+        "models": {"unknown_model": {}},
+    }
+    with pytest.raises(ValueError, match="chưa được hỗ trợ"):
         validate_config(invalid_config)

@@ -268,17 +268,37 @@ streamlit run app/dashboard.py
 
 Dashboard chỉ là demo trực quan; các nhóm `Thấp/Trung bình/Cao` trong dự án là nhãn phân tích nội bộ, không phải AQI chính thức hay khuyến nghị y tế.
 
-## Dockerfile
+## Chạy bằng Docker
 
-Dockerfile chỉ đóng gói API và không tự huấn luyện trong image.
+Dockerfile chỉ đóng gói API, không huấn luyện model trong image. Cần tạo bộ file
+`artifacts/` trước khi chạy container vì thư mục này được loại khỏi build context.
+
+PowerShell trên Windows:
+
+```powershell
+python -m src.pipeline train --config configs/config.yaml
+docker build -t hcmc-pm25-forecasting:local .
+docker run --rm --name hcmc-pm25-forecasting -p 8000:8000 `
+  -v "${PWD}\artifacts:/app/artifacts" `
+  hcmc-pm25-forecasting:local
+```
+
+Linux/macOS:
 
 ```bash
 python -m src.pipeline train --config configs/config.yaml
-docker build -t hcmc-pm25-forecasting .
-docker run --rm -p 8000:8000 -v "${PWD}/artifacts:/app/artifacts" hcmc-pm25-forecasting
+docker build -t hcmc-pm25-forecasting:local .
+docker run --rm --name hcmc-pm25-forecasting -p 8000:8000 \
+  -v "${PWD}/artifacts:/app/artifacts" \
+  hcmc-pm25-forecasting:local
 ```
 
-Volume `artifacts` cần thiết vì model là output cục bộ và được loại khỏi Docker build context.
+Kiểm tra container bằng `http://localhost:8000/health`; tài liệu API ở
+`http://localhost:8000/docs`. Nếu chưa train hoặc không mount `artifacts/`,
+health check sẽ trả HTTP 503 vì chưa có model.
+
+Nếu cổng `8000` đang được ứng dụng khác sử dụng, đổi ánh xạ cổng ngoài sang
+`8001:8000` và truy cập `http://localhost:8001/health`.
 
 ## Tài liệu kỹ thuật
 

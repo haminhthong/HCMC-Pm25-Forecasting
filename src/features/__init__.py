@@ -1,4 +1,4 @@
-"""Các tiện ích tạo feature chất lượng không khí an toàn với leakage."""
+"""Các tiện ích tạo đặc trưng chất lượng không khí không rò rỉ dữ liệu."""
 
 from src.features.builder import add_missingness_features, build_features, model_feature_columns
 from src.features.exogenous import get_feature_availability, prepare_exogenous_columns

@@ -44,7 +44,7 @@ def run_train_pipeline(
     config_path: str = "configs/config.yaml",
     persist_artifacts: bool = True,
 ) -> dict[str, Any]:
-    """Chạy load, regularization, feature engineering, backtest và calibration."""
+    """Chạy nạp dữ liệu, regularization, tạo đặc trưng, backtest và hiệu chuẩn."""
     config = load_config(config_path)
     data_path = resolve_data_path(config["data"]["path"])
     raw = load_air_quality(config)
@@ -311,7 +311,7 @@ def run_train_pipeline(
 
 
 def main() -> None:
-    """CLI canonical của dự án."""
+    """CLI chính của dự án."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Dự báo PM2.5 giờ kế tiếp tại TP.HCM")

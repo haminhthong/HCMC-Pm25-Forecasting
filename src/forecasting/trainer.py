@@ -1,4 +1,4 @@
-"""Tạo pipeline tiền xử lý và model cho từng ứng viên."""
+"""Tạo pipeline tiền xử lý và mô hình cho từng ứng viên."""
 
 from __future__ import annotations
 
@@ -14,18 +14,17 @@ from src.forecasting.models import build_model
 
 
 def resolve_candidate_params(config: dict[str, Any], model_name: str) -> dict[str, Any]:
-    """Lấy hyperparameter đúng theo tên candidate trong config."""
+    """Lấy tham số đúng theo tên ứng viên trong cấu hình."""
     models_section = config.get("models") or {}
     params = models_section.get(model_name, {})
     return dict(params) if isinstance(params, dict) else {}
 
 
 def make_pipeline(config: dict[str, Any], model_name: str) -> tuple[Pipeline, list[str]]:
-    """Tạo preprocessing và model trong cùng một sklearn Pipeline.
+    """Tạo tiền xử lý và mô hình trong cùng một sklearn Pipeline.
 
     - Ridge dùng SimpleImputer + StandardScaler.
-    - Các model cây (RandomForest, ExtraTrees, HistGradientBoosting) chỉ dùng
-      SimpleImputer vì không cần StandardScaler.
+    - HistGradientBoosting chỉ dùng SimpleImputer vì không cần StandardScaler.
     """
     station = config["data"]["station_column"]
     numeric = model_feature_columns(config)

@@ -7,7 +7,9 @@ RUN pip install --no-cache-dir -r requirements.lock
 
 COPY . .
 
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
+RUN mkdir -p /app/artifacts \
+    && useradd --create-home appuser \
+    && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000

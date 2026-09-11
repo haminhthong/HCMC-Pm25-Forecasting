@@ -1,4 +1,4 @@
-"""Kiểm tra history runtime trước khi tạo dự báo."""
+"""Kiểm tra lịch sử đầu vào trước khi tạo dự báo."""
 
 from __future__ import annotations
 

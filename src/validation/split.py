@@ -18,7 +18,7 @@ def split_by_time(
     calibration_end: str | pd.Timestamp | None = None,
     test_end: str | pd.Timestamp | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Chia dữ liệu theo lịch cố định hoặc fraction fallback.
+    """Chia dữ liệu theo lịch cố định hoặc tỷ lệ dự phòng.
 
     Khi có ``train_end``, ``calibration_end`` và ``test_end``, các mốc này được
     ưu tiên để ranh giới không dịch chuyển khi dữ liệu mới được append.

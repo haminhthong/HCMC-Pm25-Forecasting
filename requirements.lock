@@ -1,4 +1,4 @@
-# Locked requirements for Python 3.11 environment
+# Dependency cố định cho image Python 3.11.
 pandas==2.2.1
 numpy==1.26.4
 scikit-learn==1.4.1.post1

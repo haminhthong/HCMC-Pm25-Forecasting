@@ -1,4 +1,4 @@
-"""Tra cứu lag theo đúng thời gian thực để tránh leakage."""
+"""Tra cứu độ trễ theo đúng mốc thời gian để tránh rò rỉ dữ liệu."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def lookup_pm25_at_offset(
     enforce_availability: bool = True,
     source_timezone: str = DEFAULT_SOURCE_TIMEZONE,
 ) -> pd.Series:
-    """Tra PM2.5 tại một độ lệch giờ chính xác trong cùng trạm (Exact Clock-Time Lookup).
+    """Tra PM2.5 tại một độ lệch giờ chính xác trong cùng trạm.
 
     Hàm dùng khóa ``(station, timestamp + offset_hours)`` thay vì dịch theo số dòng
     (row-position shift). Vì vậy, nếu dữ liệu bị khuyết một giờ, lag 1 giờ sẽ là NaN

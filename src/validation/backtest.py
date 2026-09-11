@@ -1,4 +1,4 @@
-"""Chạy backtest expanding-window mà không dùng dữ liệu tương lai."""
+"""Chạy backtest theo cửa sổ mở rộng mà không dùng dữ liệu tương lai."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def expanding_time_folds(
     folds: int,
     minimum_train_periods: int,
 ) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Sinh expanding folds mà không làm rò rỉ target_timestamp sang validation."""
+    """Sinh các cửa sổ mở rộng, không làm rò rỉ target_timestamp sang validation."""
     periods = np.sort(frame[timestamp_column].unique())
     validation_periods = periods[minimum_train_periods:]
     if len(validation_periods) < folds:

@@ -1,4 +1,4 @@
-"""Tạo báo cáo Markdown ngắn từ evaluation artifact."""
+"""Tạo báo cáo Markdown ngắn từ bộ kết quả đánh giá."""
 
 from __future__ import annotations
 

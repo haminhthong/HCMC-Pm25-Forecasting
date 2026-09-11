@@ -62,7 +62,7 @@ def normalize_timestamp_series(
                 CANONICAL_STORAGE_TIMEZONE
             )
         except (AttributeError, TypeError):
-            # Input vừa naive vừa aware tạo object dtype; chuẩn hóa từng phần tử
+            # Dữ liệu đầu vào vừa naive vừa aware tạo object dtype; chuẩn hóa từng phần tử
             # để không lặng lẽ biến một phần timestamp thành UTC giả.
             normalized = []
             for value in parsed:

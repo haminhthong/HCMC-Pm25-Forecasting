@@ -46,14 +46,15 @@ def regularize_hourly_series(
     if group_columns:
         group_columns = list(group_columns)
         pieces = []
-        for keys, group in work.groupby(group_columns, sort=False):
+        grouping_key = group_columns[0] if len(group_columns) == 1 else group_columns
+        for keys, group in work.groupby(grouping_key, sort=False):
             regularized_group = _regularize_single_series(group, timestamp_column, freq)
             if not isinstance(keys, tuple):
                 keys = (keys,)
             for col, val in zip(group_columns, keys, strict=False):
                 regularized_group[col] = val
             pieces.append(regularized_group)
-            inserted += int(getattr(regularized_group, "_inserted_missing_rows", 0))
+            inserted += int(regularized_group.attrs.get("_inserted_missing_rows", 0))
         result = pd.concat(pieces, ignore_index=True)
     else:
         result = _regularize_single_series(work, timestamp_column, freq)

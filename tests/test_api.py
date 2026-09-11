@@ -46,8 +46,11 @@ def test_api_prediction_response_schema(monkeypatch):
         "data_quality": {"status": "valid", "use_persistence": False},
     }
 
+    captured = {}
+
     class FakePredictor:
         def predict(self, observations):
+            captured["columns"] = list(observations.columns)
             return expected
 
     monkeypatch.setattr(api, "get_predictor", lambda: FakePredictor())
@@ -64,6 +67,7 @@ def test_api_prediction_response_schema(monkeypatch):
     assert res["interval"]["coverage"] == 0.9
     assert res["interval"]["method"] == "split_conformal"
     assert res["data_quality"]["status"] == "valid"
+    assert "available_at" not in captured["columns"]
 
 
 def test_predict_returns_503_when_file_not_found(monkeypatch):
